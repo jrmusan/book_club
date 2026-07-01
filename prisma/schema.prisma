@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PENDING
+}
+
+enum BookExternalSource {
+  GOOGLE
+  OPEN_LIBRARY
+}
+
+enum PollType {
+  BOOK_SELECTION
+  MEETING
+}
+
+enum PollStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum NotificationType {
+  POLL_OPENED
+  INVITE_ACCEPTED
+  MEETING_SCHEDULED
+  CLUB_INVITE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedClubs    Club[]           @relation("ClubOwner")
+  memberships   ClubMembership[]
+  invitesSent   ClubInvite[]     @relation("InviteSender")
+  pollsCreated  Poll[]           @relation("PollCreator")
+  pollVotes     PollVote[]
+  bookRatings   BookRating[]
+  bookRankings  BookRanking[]
+  notifications Notification[]
+}
+
+model Club {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User             @relation("ClubOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships ClubMembership[]
+  invites     ClubInvite[]
+  polls       Poll[]
+  meetings    Meeting[]
+  bookRatings BookRating[]
+  bookRankings BookRanking[]
+  clubBooks   ClubBook[]
+  notifications Notification[]
+}
+
+model ClubMembership {
+  id        String           @id @default(cuid())
+  clubId    String
+  userId    String
+  role      MembershipRole   @default(MEMBER)
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId])
+  @@index([userId])
+}
+
+model ClubInvite {
+  id          String    @id @default(cuid())
+  clubId      String
+  email       String
+  token       String    @unique @default(cuid())
+  invitedById String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  club      Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  invitedBy User @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([clubId])
+}
+
+model Book {
+  id             String             @id @default(cuid())
+  externalSource BookExternalSource
+  externalId     String
+  title          String
+  authors        String[]
+  description    String?
+  coverUrl       String?
+  isbn           String?
+  publishedYear  Int?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  pollOptions  PollOption[]
+  clubBooks    ClubBook[]
+  bookRatings  BookRating[]
+  bookRankings BookRanking[]
+
+  @@unique([externalSource, externalId])
+}
+
+model ClubBook {
+  id        String   @id @default(cuid())
+  clubId    String
+  bookId    String
+  addedAt   DateTime @default(now())
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, bookId])
+}
+
+model Poll {
+  id          String     @id @default(cuid())
+  clubId      String
+  type        PollType
+  title       String
+  status      PollStatus @default(DRAFT)
+  createdById String
+  opensAt     DateTime?
+  closesAt    DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  club      Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  createdBy User         @relation("PollCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  options   PollOption[]
+  votes     PollVote[]
+  meetings  Meeting[]
+  notifications Notification[]
+
+  @@index([clubId])
+}
+
+model PollOption {
+  id        String  @id @default(cuid())
+  pollId    String
+  bookId    String?
+  label     String?
+  sortOrder Int     @default(0)
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  book  Book?      @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  votes PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+}
+
+model Meeting {
+  id          String   @id @default(cuid())
+  clubId      String
+  pollId      String?
+  title       String
+  location    String?
+  scheduledAt DateTime
+  timezone    String   @default("America/New_York")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  club Club  @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  poll Poll? @relation(fields: [pollId], references: [id], onDelete: SetNull)
+
+  @@index([clubId])
+}
+
+model BookRating {
+  id         String    @id @default(cuid())
+  clubId     String
+  userId     String
+  bookId     String
+  rating     Int
+  review     String?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId, bookId])
+}
+
+model BookRanking {
+  id        String   @id @default(cuid())
+  clubId    String
+  userId    String
+  bookId    String
+  rank      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId, bookId])
+  @@unique([clubId, userId, rank])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  payload   Json
+  readAt    DateTime?
+  clubId    String?
+  pollId    String?
+  createdAt DateTime         @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  club Club? @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  poll Poll? @relation(fields: [pollId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
