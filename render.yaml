@@ -13,7 +13,6 @@ services:
     dockerContext: .
     healthCheckPath: /
     buildCommand: ""
-    preDeployCommand: npx prisma migrate deploy
     envVars:
       - key: DATABASE_URL
         fromDatabase:

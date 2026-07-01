@@ -61,8 +61,7 @@ Open [http://localhost:3000](http://localhost:3000).
    - `AUTH_SECRET` — `openssl rand -base64 32`
    - `AUTH_URL` / `NEXTAUTH_URL` — your Render app URL (e.g. `https://book-club-web.onrender.com`)
    - `GOOGLE_BOOKS_API_KEY` — optional, for higher Google Books API limits
-4. Set **Pre-Deploy Command**: `npx prisma migrate deploy`
-5. Deploy.
+4. Deploy. Database migrations run automatically on container startup (Render free tier does not support pre-deploy commands).
 
 ### Docker (manual)
 
