@@ -8,8 +8,10 @@ FROM base AS deps
 # Native bcrypt needs a toolchain on Alpine when prebuilds aren't used.
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
-# Do not ignore scripts — bcrypt must build/install its native binding.
-RUN npm install
+# Skip lifecycle scripts so postinstall (prisma generate) doesn't run before the schema is present.
+# Then rebuild bcrypt so its native binding install script still runs.
+RUN npm install --ignore-scripts \
+  && npm rebuild bcrypt
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
