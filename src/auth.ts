@@ -1,9 +1,9 @@
 import { cache } from "react";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
+import { hashPassword, needsRehash, verifyPassword } from "@/lib/password";
 import { loginSchema } from "@/lib/validations/auth";
 
 const nextAuth = NextAuth({
@@ -23,8 +23,17 @@ const nextAuth = NextAuth({
         });
         if (!user) return null;
 
-        const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+        const valid = await verifyPassword(parsed.data.password, user.passwordHash);
         if (!valid) return null;
+
+        // Migrate older cost-12 (or other) hashes down to current rounds after a successful login.
+        if (needsRehash(user.passwordHash)) {
+          const passwordHash = await hashPassword(parsed.data.password);
+          await db.user.update({
+            where: { id: user.id },
+            data: { passwordHash },
+          });
+        }
 
         return {
           id: user.id,

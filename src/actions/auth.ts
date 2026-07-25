@@ -1,8 +1,8 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
 import { db } from "@/lib/db";
+import { hashPassword } from "@/lib/password";
 import { slugify } from "@/lib/utils";
 import { registerSchema } from "@/lib/validations/auth";
 import { AuthError } from "next-auth";
@@ -31,7 +31,7 @@ export async function registerUser(formData: FormData): Promise<ActionResult<{ u
     return { success: false, error: "Email or username already in use" };
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const passwordHash = await hashPassword(parsed.data.password);
   const user = await db.user.create({
     data: {
       email,
