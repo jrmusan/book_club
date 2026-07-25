@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { addBookToClub, searchBooks, upsertBook, type BookSearchResult } from "@/lib/books";
 import { requireClubMemberBySlug, requireClubOwnerBySlug, requireUser } from "@/lib/club-access";
 import { createNotificationsForClubMembers } from "@/lib/notifications";
+import { getPollWinner } from "@/lib/polls";
 import {
   bookRankingSchema,
   bookRatingSchema,
@@ -65,9 +66,7 @@ export async function createBookPoll(
     },
   });
 
-  for (const bookId of parsed.data.bookIds) {
-    await addBookToClub(club.id, bookId);
-  }
+  await Promise.all(parsed.data.bookIds.map((bookId) => addBookToClub(club.id, bookId)));
 
   revalidatePath(`/clubs/${clubSlug}/polls`);
   return { success: true, data: { pollId: poll.id } };
@@ -451,34 +450,3 @@ export async function addBookFromSearch(
   }
 }
 
-async function getPollWinner(pollId: string) {
-  const votes = await db.pollVote.groupBy({
-    by: ["optionId"],
-    where: { pollId },
-    _count: { optionId: true },
-    orderBy: { _count: { optionId: "desc" } },
-    take: 1,
-  });
-  if (!votes.length) return null;
-  return db.pollOption.findUnique({
-    where: { id: votes[0].optionId },
-    include: { book: true },
-  });
-}
-
-export async function getPollResults(pollId: string) {
-  const options = await db.pollOption.findMany({
-    where: { pollId },
-    include: {
-      book: true,
-      _count: { select: { votes: true } },
-    },
-    orderBy: { sortOrder: "asc" },
-  });
-  return options.map((o) => ({
-    id: o.id,
-    label: o.label,
-    book: o.book,
-    voteCount: o._count.votes,
-  }));
-}

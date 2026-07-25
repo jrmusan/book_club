@@ -14,12 +14,12 @@ export default async function ConfirmMeetingPage({
   await requireClubOwnerBySlug(slug, user.id);
 
   if (!pollId) {
-    return <main className="p-8">Missing poll ID</main>;
+    return <p>Missing poll ID</p>;
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-8">
+    <div className="mx-auto max-w-lg">
       <ConfirmMeetingForm clubSlug={slug} pollId={pollId} />
-    </main>
+    </div>
   );
 }

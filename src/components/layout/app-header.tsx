@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Bell, BookOpen, LogOut } from "lucide-react";
 import { signOut } from "@/auth";
 import { getUnreadNotificationCount } from "@/lib/notifications";
@@ -6,9 +7,19 @@ import { requireUser } from "@/lib/club-access";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+async function NotificationBadge({ userId }: { userId: string }) {
+  const unreadCount = await getUnreadNotificationCount(userId);
+  if (unreadCount <= 0) return null;
+
+  return (
+    <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center px-1">
+      {unreadCount}
+    </Badge>
+  );
+}
+
 export async function AppHeader() {
   const user = await requireUser();
-  const unreadCount = await getUnreadNotificationCount(user.id!);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur">
@@ -22,11 +33,9 @@ export async function AppHeader() {
             <Button variant="ghost" size="icon" aria-label="Notifications">
               <Bell className="h-5 w-5" />
             </Button>
-            {unreadCount > 0 && (
-              <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center px-1">
-                {unreadCount}
-              </Badge>
-            )}
+            <Suspense fallback={null}>
+              <NotificationBadge userId={user.id!} />
+            </Suspense>
           </Link>
           <span className="hidden text-sm text-muted-foreground sm:inline">
             @{user.username}
@@ -42,6 +51,20 @@ export async function AppHeader() {
             </Button>
           </form>
         </div>
+      </div>
+    </header>
+  );
+}
+
+export function AppHeaderFallback() {
+  return (
+    <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        <div className="flex items-center gap-2 font-semibold">
+          <BookOpen className="h-5 w-5 text-primary" />
+          Book Club
+        </div>
+        <div className="h-8 w-24 animate-pulse rounded-md bg-muted" />
       </div>
     </header>
   );

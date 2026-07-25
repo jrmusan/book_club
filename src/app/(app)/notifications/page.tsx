@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { markAllNotificationsRead } from "@/actions/notifications";
 import { requireUser } from "@/lib/club-access";
-import { getUserNotifications } from "@/actions/notifications";
+import { getUserNotifications } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

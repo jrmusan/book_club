@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ClubNav } from "@/components/layout/club-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
@@ -14,6 +13,13 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
   const meetings = await db.meeting.findMany({
     where: { clubId: club.id },
     orderBy: { scheduledAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      scheduledAt: true,
+      location: true,
+      notes: true,
+    },
   });
 
   const now = new Date();
@@ -21,7 +27,7 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
   const past = meetings.filter((m) => m.scheduledAt < now);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Meetings</h1>
         {isOwner && (
@@ -30,9 +36,8 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
           </Button>
         )}
       </div>
-      <ClubNav slug={slug} isOwner={isOwner} />
 
-      <div className="mt-8 space-y-8">
+      <div className="space-y-8">
         <section>
           <h2 className="mb-4 text-lg font-semibold">Upcoming</h2>
           {upcoming.length === 0 ? (
@@ -51,7 +56,11 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
                       {m.location && ` · ${m.location}`}
                     </CardDescription>
                   </CardHeader>
-                  {m.notes && <CardContent><p className="text-sm">{m.notes}</p></CardContent>}
+                  {m.notes && (
+                    <CardContent>
+                      <p className="text-sm">{m.notes}</p>
+                    </CardContent>
+                  )}
                 </Card>
               ))}
             </div>
@@ -77,6 +86,6 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
           </section>
         )}
       </div>
-    </main>
+    </>
   );
 }

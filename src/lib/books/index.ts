@@ -30,7 +30,10 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
   if (key) url.searchParams.set("key", key);
 
   try {
-    const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+    const res = await fetch(url.toString(), {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(4000),
+    });
     if (!res.ok) return [];
     const data = (await res.json()) as {
       items?: Array<{
@@ -75,7 +78,10 @@ async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
   url.searchParams.set("limit", "10");
 
   try {
-    const res = await fetch(url.toString(), { next: { revalidate: 3600 } });
+    const res = await fetch(url.toString(), {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(4000),
+    });
     if (!res.ok) return [];
     const data = (await res.json()) as {
       docs?: Array<{

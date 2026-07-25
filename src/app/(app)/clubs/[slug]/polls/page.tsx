@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ClubNav } from "@/components/layout/club-nav";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
@@ -13,15 +12,20 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
   const polls = await db.poll.findMany({
     where: { clubId: club.id },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { votes: true, options: true } } },
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      status: true,
+      _count: { select: { votes: true, options: true } },
+    },
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <>
       <h1 className="mb-6 text-3xl font-bold">Polls</h1>
-      <ClubNav slug={slug} isOwner={membership.role === "OWNER"} />
 
-      <div className="mt-8 space-y-4">
+      <div className="space-y-4">
         {polls.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
@@ -43,7 +47,8 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
                   <div>
                     <CardTitle className="text-lg">{poll.title}</CardTitle>
                     <CardDescription>
-                      {poll.type.replace("_", " ")} · {poll._count.options} options · {poll._count.votes} votes
+                      {poll.type.replace("_", " ")} · {poll._count.options} options ·{" "}
+                      {poll._count.votes} votes
                     </CardDescription>
                   </div>
                   <Badge
@@ -63,6 +68,6 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
           ))
         )}
       </div>
-    </main>
+    </>
   );
 }

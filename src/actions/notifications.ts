@@ -39,15 +39,3 @@ export async function markAllNotificationsRead(): Promise<ActionResult> {
   revalidatePath("/notifications");
   return { success: true };
 }
-
-export async function getUserNotifications(userId: string) {
-  return db.notification.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      club: { select: { name: true, slug: true } },
-      poll: { select: { title: true, id: true } },
-    },
-  });
-}

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -5,7 +6,7 @@ import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
 import { loginSchema } from "@/lib/validations/auth";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
@@ -35,3 +36,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
 });
+
+export const { handlers, signIn, signOut } = nextAuth;
+
+/** Request-scoped memoization so layout/header/page share one session read. */
+export const auth = cache(nextAuth.auth);

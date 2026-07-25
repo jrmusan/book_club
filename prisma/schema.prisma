@@ -166,6 +166,7 @@ model Poll {
   notifications Notification[]
 
   @@index([clubId])
+  @@index([clubId, status])
 }
 
 model PollOption {
@@ -212,6 +213,7 @@ model Meeting {
   poll Poll? @relation(fields: [pollId], references: [id], onDelete: SetNull)
 
   @@index([clubId])
+  @@index([clubId, scheduledAt])
 }
 
 model BookRating {

@@ -1,4 +1,3 @@
-import { ClubNav } from "@/components/layout/club-nav";
 import { InviteMemberForm } from "@/components/club/invite-member-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,15 +18,15 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
     db.clubInvite.findMany({
       where: { clubId: club.id, acceptedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
+      select: { id: true, email: true, expiresAt: true },
     }),
   ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <>
       <h1 className="mb-6 text-3xl font-bold">Members</h1>
-      <ClubNav slug={slug} isOwner />
 
-      <div className="mt-8 space-y-8">
+      <div className="space-y-8">
         <InviteMemberForm clubSlug={slug} />
 
         <section>
@@ -37,9 +36,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
               <Card key={m.id}>
                 <CardHeader className="flex flex-row items-center justify-between py-4">
                   <div>
-                    <CardTitle className="text-base">
-                      {m.user.name ?? m.user.username}
-                    </CardTitle>
+                    <CardTitle className="text-base">{m.user.name ?? m.user.username}</CardTitle>
                     <CardContent className="p-0 text-sm text-muted-foreground">
                       @{m.user.username} · {m.user.email}
                     </CardContent>
@@ -66,6 +63,6 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
           </section>
         )}
       </div>
-    </main>
+    </>
   );
 }

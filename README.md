@@ -56,10 +56,11 @@ Open [http://localhost:3000](http://localhost:3000).
 2. In Render, create a **Blueprint** from `render.yaml`, or:
    - Create a **PostgreSQL** database
    - Create a **Web Service** using the Docker runtime pointing at this repo
-3. Set environment variables:
+3. Environment variables (most are set automatically by `render.yaml`):
    - `DATABASE_URL` — from Render Postgres (append `?connection_limit=5` if needed)
-   - `AUTH_SECRET` — `openssl rand -base64 32`
-   - `AUTH_URL` / `NEXTAUTH_URL` — your Render app URL (e.g. `https://book-club-web.onrender.com`)
+   - `AUTH_SECRET` — auto-generated
+   - `AUTH_TRUST_HOST` — `true` (required behind Render's proxy)
+   - `AUTH_URL` / `NEXTAUTH_URL` — auto-set from `RENDER_EXTERNAL_URL`
    - `GOOGLE_BOOKS_API_KEY` — optional, for higher Google Books API limits
 4. Deploy. Database migrations run automatically on container startup (Render free tier does not support pre-deploy commands).
 

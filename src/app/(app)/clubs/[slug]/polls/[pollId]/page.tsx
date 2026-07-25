@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { ClubNav } from "@/components/layout/club-nav";
 import { PollVoteForm } from "@/components/poll/poll-vote-form";
 import { PollActions } from "@/components/poll/poll-actions";
 import { Badge } from "@/components/ui/badge";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
-import { getPollResults } from "@/actions/polls";
 
 export default async function PollDetailPage({
   params,
@@ -18,57 +16,69 @@ export default async function PollDetailPage({
 
   const poll = await db.poll.findFirst({
     where: { id: pollId, clubId: club.id },
+    include: {
+      options: {
+        include: {
+          book: true,
+          _count: { select: { votes: true } },
+        },
+        orderBy: { sortOrder: "asc" },
+      },
+      votes: {
+        where: { userId: user.id },
+        take: 1,
+        select: { optionId: true },
+      },
+    },
   });
+
   if (!poll) {
-    return <main className="p-8">Poll not found</main>;
+    return <p>Poll not found</p>;
   }
 
-  const [results, userVote] = await Promise.all([
-    getPollResults(pollId),
-    db.pollVote.findUnique({
-      where: { pollId_userId: { pollId, userId: user.id } },
-    }),
-  ]);
-
+  const results = poll.options.map((o) => ({
+    id: o.id,
+    label: o.label,
+    book: o.book,
+    voteCount: o._count.votes,
+  }));
+  const userVote = poll.votes[0];
   const isOwner = membership.role === "OWNER";
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <ClubNav slug={slug} isOwner={isOwner} />
-      <div className="mt-8">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{poll.title}</h1>
-            <p className="text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
-          </div>
-          <Badge>{poll.status}</Badge>
+    <div className="mx-auto max-w-2xl">
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{poll.title}</h1>
+          <p className="text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
         </div>
-
-        {isOwner && (
-          <PollActions clubSlug={slug} pollId={pollId} status={poll.status} pollType={poll.type} />
-        )}
-
-        <div className="mt-6">
-          <PollVoteForm
-            clubSlug={slug}
-            pollId={pollId}
-            options={results}
-            userVoteOptionId={userVote?.optionId}
-            isOpen={poll.status === "OPEN"}
-          />
-        </div>
-
-        {poll.status === "CLOSED" && poll.type === "MEETING" && isOwner && (
-          <div className="mt-6">
-            <Link
-              href={`/clubs/${slug}/meetings/confirm?pollId=${pollId}`}
-              className="text-primary hover:underline"
-            >
-              Confirm meeting from results →
-            </Link>
-          </div>
-        )}
+        <Badge>{poll.status}</Badge>
       </div>
-    </main>
+
+      {isOwner && (
+        <PollActions clubSlug={slug} pollId={pollId} status={poll.status} pollType={poll.type} />
+      )}
+
+      <div className="mt-6">
+        <PollVoteForm
+          clubSlug={slug}
+          pollId={pollId}
+          options={results}
+          userVoteOptionId={userVote?.optionId}
+          isOpen={poll.status === "OPEN"}
+        />
+      </div>
+
+      {poll.status === "CLOSED" && poll.type === "MEETING" && isOwner && (
+        <div className="mt-6">
+          <Link
+            href={`/clubs/${slug}/meetings/confirm?pollId=${pollId}`}
+            className="text-primary hover:underline"
+          >
+            Confirm meeting from results →
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }

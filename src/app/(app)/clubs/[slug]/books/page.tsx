@@ -1,4 +1,3 @@
-import { ClubNav } from "@/components/layout/club-nav";
 import { BookRatingForm } from "@/components/book/book-rating-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
@@ -8,7 +7,7 @@ import { truncate } from "@/lib/utils";
 export default async function BooksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club, membership } = await requireClubMemberBySlug(slug, user.id);
+  const { club } = await requireClubMemberBySlug(slug, user.id);
 
   const clubBooks = await db.clubBook.findMany({
     where: { clubId: club.id },
@@ -17,6 +16,7 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
         include: {
           bookRatings: {
             where: { clubId: club.id, userId: user.id },
+            take: 1,
           },
         },
       },
@@ -25,15 +25,15 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <>
       <h1 className="mb-6 text-3xl font-bold">Books</h1>
-      <ClubNav slug={slug} isOwner={membership.role === "OWNER"} />
 
-      <div className="mt-8 space-y-6">
+      <div className="space-y-6">
         {clubBooks.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
-              No books in this club yet. Books are added when you create polls or close a winning vote.
+              No books in this club yet. Books are added when you create polls or close a winning
+              vote.
             </CardContent>
           </Card>
         ) : (
@@ -71,6 +71,6 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
           })
         )}
       </div>
-    </main>
+    </>
   );
 }
