@@ -1,4 +1,5 @@
 import { BookRankingList } from "@/components/book/book-ranking-list";
+import { MemberRankings } from "@/components/book/member-rankings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
@@ -21,7 +22,11 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
     }),
     db.bookRanking.findMany({
       where: { clubId: club.id },
-      include: { book: true },
+      include: {
+        book: true,
+        user: { select: { id: true, username: true, name: true } },
+      },
+      orderBy: { rank: "asc" },
     }),
     db.clubMembership.count({
       where: { clubId: club.id, status: "ACTIVE" },
@@ -56,6 +61,48 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
   const clubFavorites = [...aggregateScores.values()]
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
+
+  const rankingsByUser = new Map<
+    string,
+    {
+      userId: string;
+      displayName: string;
+      username: string;
+      books: {
+        id: string;
+        title: string;
+        authors: string[];
+        coverUrl: string | null;
+        rank: number;
+      }[];
+    }
+  >();
+
+  for (const ranking of allRankings) {
+    const existing = rankingsByUser.get(ranking.userId);
+    const entry = {
+      id: ranking.book.id,
+      title: ranking.book.title,
+      authors: ranking.book.authors,
+      coverUrl: ranking.book.coverUrl,
+      rank: ranking.rank,
+    };
+    if (existing) {
+      existing.books.push(entry);
+    } else {
+      rankingsByUser.set(ranking.userId, {
+        userId: ranking.user.id,
+        displayName: ranking.user.name ?? ranking.user.username,
+        username: ranking.user.username,
+        books: [entry],
+      });
+    }
+  }
+
+  const memberRankings = [...rankingsByUser.values()].map((m) => ({
+    ...m,
+    books: [...m.books].sort((a, b) => a.rank - b.rank),
+  }));
 
   return (
     <>
@@ -103,6 +150,11 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
           )}
         </section>
       </div>
+
+      <section className="mt-10">
+        <h2 className="mb-4 text-lg font-semibold">Members&apos; rankings</h2>
+        <MemberRankings members={memberRankings} currentUserId={user.id} />
+      </section>
     </>
   );
 }

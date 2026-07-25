@@ -1,4 +1,5 @@
 import { BookRatingForm } from "@/components/book/book-rating-form";
+import { MemberReviews } from "@/components/book/member-reviews";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
@@ -15,8 +16,11 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
       book: {
         include: {
           bookRatings: {
-            where: { clubId: club.id, userId: user.id },
-            take: 1,
+            where: { clubId: club.id },
+            include: {
+              user: { select: { id: true, username: true, name: true } },
+            },
+            orderBy: { updatedAt: "desc" },
           },
         },
       },
@@ -38,7 +42,16 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
           </Card>
         ) : (
           clubBooks.map(({ book }) => {
-            const userRating = book.bookRatings[0];
+            const userRating = book.bookRatings.find((r) => r.userId === user.id);
+            const memberReviews = book.bookRatings.map((r) => ({
+              id: r.id,
+              rating: r.rating,
+              review: r.review,
+              userId: r.user.id,
+              displayName: r.user.name ?? r.user.username,
+              username: r.user.username,
+            }));
+
             return (
               <Card key={book.id}>
                 <CardHeader>
@@ -58,13 +71,16 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
                   <BookRatingForm
                     clubSlug={slug}
                     bookId={book.id}
                     initialRating={userRating?.rating}
                     initialReview={userRating?.review ?? undefined}
                   />
+                  <div className="border-t border-border pt-6">
+                    <MemberReviews reviews={memberReviews} currentUserId={user.id} />
+                  </div>
                 </CardContent>
               </Card>
             );
