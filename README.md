@@ -78,7 +78,7 @@ docker run -p 3000:3000 \
 
 ## Features
 
-- **Multi-club support** — create clubs, invite members by email
+- **Multi-club support** — create clubs, invite members by email (share a link or open your mail app)
 - **Book polls** — search Google Books / Open Library, add covers & descriptions, vote
 - **Meeting polls** — vote on when/where to meet, confirm the winner
 - **In-app notifications** — members notified when polls open or meetings are scheduled

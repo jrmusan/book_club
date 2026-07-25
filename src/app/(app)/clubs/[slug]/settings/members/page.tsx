@@ -1,6 +1,7 @@
 import { InviteMemberForm } from "@/components/club/invite-member-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { MemberRow } from "@/components/club/member-row";
+import { PendingInviteRow } from "@/components/club/pending-invite-row";
+import { inviteAcceptUrl } from "@/lib/app-url";
 import { requireClubOwnerBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 
@@ -18,7 +19,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
     db.clubInvite.findMany({
       where: { clubId: club.id, acceptedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
-      select: { id: true, email: true, expiresAt: true },
+      select: { id: true, email: true, expiresAt: true, token: true },
     }),
   ]);
 
@@ -27,23 +28,22 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
       <h1 className="mb-6 text-3xl font-bold">Members</h1>
 
       <div className="space-y-8">
-        <InviteMemberForm clubSlug={slug} />
+        <InviteMemberForm clubSlug={slug} clubName={club.name} />
 
         <section>
           <h2 className="mb-4 text-lg font-semibold">Active members ({members.length})</h2>
           <div className="space-y-2">
             {members.map((m) => (
-              <Card key={m.id}>
-                <CardHeader className="flex flex-row items-center justify-between py-4">
-                  <div>
-                    <CardTitle className="text-base">{m.user.name ?? m.user.username}</CardTitle>
-                    <CardContent className="p-0 text-sm text-muted-foreground">
-                      @{m.user.username} · {m.user.email}
-                    </CardContent>
-                  </div>
-                  {m.role === "OWNER" && <Badge>Owner</Badge>}
-                </CardHeader>
-              </Card>
+              <MemberRow
+                key={m.id}
+                clubSlug={slug}
+                userId={m.user.id}
+                displayName={m.user.name ?? m.user.username}
+                username={m.user.username}
+                email={m.user.email}
+                role={m.role}
+                canRemove={m.role !== "OWNER" && m.user.id !== user.id}
+              />
             ))}
           </div>
         </section>
@@ -53,11 +53,15 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
             <h2 className="mb-4 text-lg font-semibold">Pending invites</h2>
             <div className="space-y-2">
               {pendingInvites.map((invite) => (
-                <Card key={invite.id}>
-                  <CardContent className="py-4 text-sm">
-                    {invite.email} — expires {invite.expiresAt.toLocaleDateString()}
-                  </CardContent>
-                </Card>
+                <PendingInviteRow
+                  key={invite.id}
+                  inviteId={invite.id}
+                  clubSlug={slug}
+                  email={invite.email}
+                  expiresAt={invite.expiresAt.toISOString()}
+                  inviteUrl={inviteAcceptUrl(invite.token)}
+                  clubName={club.name}
+                />
               ))}
             </div>
           </section>

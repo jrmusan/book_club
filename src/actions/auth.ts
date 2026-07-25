@@ -113,10 +113,16 @@ export async function createClub(formData: FormData): Promise<ActionResult<{ slu
 export async function inviteMember(
   clubSlug: string,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<
+  ActionResult<
+    | { kind: "added"; email: string }
+    | { kind: "pending"; email: string; inviteToken: string; inviteUrl: string }
+  >
+> {
   const { requireClubOwnerBySlug } = await import("@/lib/club-access");
   const { inviteMemberSchema } = await import("@/lib/validations/auth");
   const { createNotification } = await import("@/lib/notifications");
+  const { inviteAcceptUrl } = await import("@/lib/app-url");
 
   let user;
   try {
@@ -161,18 +167,23 @@ export async function inviteMember(
         data: { status: "ACTIVE" },
       });
     }
-    await createNotification(existingMember.id, "CLUB_INVITE", {
-      message: `You were added to ${club.name}`,
-      clubSlug: club.slug,
-      clubName: club.name,
-    }, club.id);
-    return { success: true };
+    await createNotification(
+      existingMember.id,
+      "CLUB_INVITE",
+      {
+        message: `You were added to ${club.name}`,
+        clubSlug: club.slug,
+        clubName: club.name,
+      },
+      club.id
+    );
+    return { success: true, data: { kind: "added", email } };
   }
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  await db.clubInvite.create({
+  const invite = await db.clubInvite.create({
     data: {
       clubId: club.id,
       email,
@@ -181,7 +192,15 @@ export async function inviteMember(
     },
   });
 
-  return { success: true };
+  return {
+    success: true,
+    data: {
+      kind: "pending",
+      email,
+      inviteToken: invite.token,
+      inviteUrl: inviteAcceptUrl(invite.token),
+    },
+  };
 }
 
 export async function acceptInvite(token: string): Promise<ActionResult<{ clubSlug: string }>> {
