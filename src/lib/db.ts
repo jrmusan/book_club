@@ -3,14 +3,14 @@ import { PrismaClient } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 /**
- * Cap the Prisma connection pool for small/free Postgres plans.
- * Render free Postgres has limited connections and no managed pooler.
- * Only rewrite the URL when DATABASE_URL is present — Docker builds have no DB env.
+ * Neon’s pooler already multiplexes connections. Keep Prisma’s own pool small
+ * on serverless (Vercel) so we don’t open more sockets than needed.
  */
 function withPoolLimits(url: string) {
   if (/[?&]connection_limit=/.test(url)) return url;
+  const limit = process.env.VERCEL ? "1" : "5";
   const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}connection_limit=5&pool_timeout=10`;
+  return `${url}${separator}connection_limit=${limit}&pool_timeout=20&connect_timeout=15`;
 }
 
 function createPrismaClient() {

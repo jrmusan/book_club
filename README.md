@@ -8,9 +8,9 @@ A production-ready web app for organizing book clubs — vote on books, plan mee
 - **React 19** + TypeScript 5
 - **Auth.js v5** (Credentials: email/username/password)
 - **Prisma 5** + PostgreSQL
-- **Zod 3** validation
-- **Node.js 22** (Docker)
+- **Zod** validation
 - **Turbopack** for local dev
+- **Vercel** for production hosting (Neon Postgres recommended)
 
 ## Local development
 
@@ -50,31 +50,33 @@ Open [http://localhost:3000](http://localhost:3000).
 | alice@example.com | password123 | Club owner |
 | bob@example.com | password123 | Member |
 
-## Deploy to Render
+## Deploy to Vercel
 
-1. Push this repo to GitHub.
-2. In Render, create a **Blueprint** from `render.yaml`, or:
-   - Create a **PostgreSQL** database
-   - Create a **Web Service** using the Docker runtime pointing at this repo
-3. Environment variables (most are set automatically by `render.yaml`):
-   - `DATABASE_URL` — from Render Postgres (append `?connection_limit=5` if needed)
-   - `AUTH_SECRET` — auto-generated
-   - `AUTH_TRUST_HOST` — `true` (required behind Render's proxy)
-   - `AUTH_URL` / `NEXTAUTH_URL` — auto-set from `RENDER_EXTERNAL_URL`
-   - `GOOGLE_BOOKS_API_KEY` — optional, for higher Google Books API limits
-4. Deploy. Database migrations run automatically on container startup (Render free tier does not support pre-deploy commands).
+1. Create a free [Neon](https://neon.tech) Postgres project (already done for this repo via `neon init` / `neon deploy`).
+2. Locally, env vars are pulled into `.env` by the Neon CLI:
+   - `DATABASE_URL` — pooled (`-pooler`) for the app
+   - `DATABASE_URL_UNPOOLED` — direct, for `prisma migrate`
+3. Push this repo to GitHub and [import the project in Vercel](https://vercel.com/new).
+4. In Vercel → **Settings → Environment Variables**, set the same Neon keys (copy from `.env` or run `neon env pull`), plus:
 
-### Docker (manual)
+| Variable | Value |
+|----------|--------|
+| `DATABASE_URL` | Neon **pooled** URL |
+| `DATABASE_URL_UNPOOLED` | Neon **direct** URL |
+| `AUTH_SECRET` | `openssl rand -base64 32` |
+| `AUTH_TRUST_HOST` | `true` |
+| `AUTH_URL` | `https://your-app.vercel.app` (or your custom domain) |
+| `NEXTAUTH_URL` | same as `AUTH_URL` |
+| `GOOGLE_BOOKS_API_KEY` | optional |
 
-```bash
-docker build -t book-club .
-docker run -p 3000:3000 \
-  -e DATABASE_URL="postgresql://..." \
-  -e AUTH_SECRET="..." \
-  -e AUTH_URL="http://localhost:3000" \
-  -e NEXTAUTH_URL="http://localhost:3000" \
-  book-club
-```
+5. Deploy. The build script runs `prisma migrate deploy` then `next build`.
+6. Optionally seed: `npm run db:seed`
+
+### Notes
+
+- Prefer Neon’s **pooled** URL for app traffic. Migrations use `DATABASE_URL_UNPOOLED`.
+- Keep Auth.js (do not replace with Neon Auth unless you ask to migrate login).
+- `Dockerfile` / `render.yaml` remain for optional Docker/Render; Vercel ignores them.
 
 ## Features
 
@@ -103,7 +105,7 @@ prisma/          # Schema, migrations, seed
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Dev server with Turbopack |
-| `npm run build` | Production build |
+| `npm run build` | Migrate + production build |
 | `npm run start` | Start production server |
 | `npm run db:migrate` | Run Prisma migrations (dev) |
 | `npm run db:seed` | Seed demo data |

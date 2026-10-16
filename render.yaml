@@ -18,6 +18,11 @@ services:
         fromDatabase:
           name: book-club-db
           property: connectionString
+      # Same as DATABASE_URL — required by Prisma schema (directUrl) for migrate deploy
+      - key: DATABASE_URL_UNPOOLED
+        fromDatabase:
+          name: book-club-db
+          property: connectionString
       - key: AUTH_SECRET
         generateValue: true
       - key: AUTH_TRUST_HOST
