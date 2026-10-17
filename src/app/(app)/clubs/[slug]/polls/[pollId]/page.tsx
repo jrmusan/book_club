@@ -6,6 +6,7 @@ import { enrichBooksMissingMetadata } from "@/lib/books";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 import { closeExpiredPoll } from "@/actions/polls";
+import { rankingScores, type PollScoreMethod } from "@/lib/polls";
 
 export default async function PollDetailPage({
   params,
@@ -24,6 +25,12 @@ export default async function PollDetailPage({
         title: true,
         type: true,
         status: true,
+        votingMode: true,
+        maxStars: true,
+        maxRankedBooks: true,
+        rankLimit: true,
+        starBudget: true,
+        scoreMethod: true,
         closesAt: true,
         createdById: true,
         options: {
@@ -47,13 +54,12 @@ export default async function PollDetailPage({
                 genres: true,
               },
             },
-            _count: { select: { votes: true } },
+            votes: { select: { stars: true, userId: true } },
           },
         },
         votes: {
           where: { userId: user.id },
-          take: 1,
-          select: { optionId: true },
+          select: { optionId: true, stars: true },
         },
       },
     }),
@@ -109,7 +115,7 @@ export default async function PollDetailPage({
                   genres: true,
                 },
               },
-              _count: { select: { votes: true } },
+              votes: { select: { stars: true, userId: true } },
             },
           },
         },
@@ -117,6 +123,19 @@ export default async function PollDetailPage({
     : null;
 
   const options = freshPoll?.options ?? poll.options;
+  const ranking = poll.votingMode === "RANKING";
+  const scoreMethod: PollScoreMethod = poll.scoreMethod === "TOP_STARS" ? "TOP_STARS" : "POINTS";
+  const rankLimit = poll.rankLimit === "BUDGET" ? "BUDGET" : "BOOKS";
+  const scores = rankingScores(
+    options.flatMap((option) =>
+      option.votes.map((vote) => ({
+        optionId: option.id,
+        userId: vote.userId,
+        stars: vote.stars,
+      }))
+    ),
+    scoreMethod
+  );
 
   const results = options.map((o) => ({
     id: o.id,
@@ -134,17 +153,21 @@ export default async function PollDetailPage({
           genres: o.book.genres ?? [],
         }
       : null,
-    voteCount: o._count.votes,
+    voteCount: o.votes.length,
+    starTotal: scores.points.get(o.id) ?? 0,
+    topPicks: scores.topPicks.get(o.id) ?? 0,
   }));
   const userVote = poll.votes[0];
+  const scoreOf = (option: (typeof results)[number]) =>
+    ranking ? (scoreMethod === "TOP_STARS" ? option.topPicks : option.starTotal) : option.voteCount;
   const isOwner = membership.role === "OWNER";
   const canManage = isOwner || poll.createdById === user.id;
   const isOpen = status === "OPEN";
-  const winningBook =
+  const leading =
     status === "CLOSED" && poll.type === "BOOK_SELECTION"
-      ? [...results].filter((option) => option.book).sort((a, b) => b.voteCount - a.voteCount)[0]
-          ?.book
+      ? [...results].filter((option) => option.book).sort((a, b) => scoreOf(b) - scoreOf(a))[0]
       : null;
+  const winningBook = leading && scoreOf(leading) > 0 ? leading.book : null;
 
   return (
     <div className="mx-auto max-w-2xl pb-20 sm:pb-0">
@@ -154,7 +177,18 @@ export default async function PollDetailPage({
             <h1 className="text-xl font-bold leading-tight sm:text-2xl">{poll.title}</h1>
             <Badge className="shrink-0">{status}</Badge>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {poll.type.replace("_", " ")}
+            {ranking
+              ? ` · Star ranking · ${
+                  rankLimit === "BUDGET"
+                    ? `${poll.starBudget} stars to spend`
+                    : `up to ${poll.maxRankedBooks} book${poll.maxRankedBooks === 1 ? "" : "s"}`
+                } · ${poll.maxStars}-star scale · ${scoreMethod === "TOP_STARS" ? "most top stars" : "most points"}`
+              : poll.type === "BOOK_SELECTION"
+                ? " · Single vote"
+                : ""}
+          </p>
           {poll.closesAt && (
             <p className="mt-2 text-sm text-muted-foreground">
               {isOpen ? "Voting closes" : "Closed"}{" "}
@@ -176,7 +210,16 @@ export default async function PollDetailPage({
           clubSlug={slug}
           pollId={pollId}
           options={results}
-          userVoteOptionId={userVote?.optionId}
+          userVoteOptionId={ranking ? undefined : userVote?.optionId}
+          userRatings={poll.votes.flatMap((vote) =>
+            vote.stars ? [{ optionId: vote.optionId, stars: vote.stars }] : []
+          )}
+          votingMode={poll.votingMode}
+          maxStars={poll.maxStars ?? 3}
+          maxRankedBooks={poll.maxRankedBooks ?? 1}
+          rankLimit={rankLimit}
+          starBudget={poll.starBudget ?? 0}
+          scoreMethod={scoreMethod}
           isOpen={isOpen}
         />
       </div>

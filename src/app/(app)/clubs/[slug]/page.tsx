@@ -116,7 +116,13 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
                 <div>
                   <p className="text-lg font-semibold">{winner.book.title}</p>
                   <p className="text-sm text-muted-foreground">{winner.book.authors.join(", ")}</p>
-                  <p className="mt-2 text-sm">{winner.voteCount} votes</p>
+                  <p className="mt-2 text-sm">
+                    {winner.scoreKind === "points"
+                      ? `${winner.voteCount} point${winner.voteCount === 1 ? "" : "s"}`
+                      : winner.scoreKind === "top picks"
+                        ? `${winner.voteCount} top pick${winner.voteCount === 1 ? "" : "s"}`
+                        : `${winner.voteCount} vote${winner.voteCount === 1 ? "" : "s"}`}
+                  </p>
                 </div>
               </div>
               <div className="border-t border-border pt-6">

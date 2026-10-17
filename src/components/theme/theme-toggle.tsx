@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sparkles, Sun } from "lucide-react";
+import { headerIconClass } from "@/components/layout/header-icon";
 import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import { cn } from "@/lib/utils";
 
-export function ThemeToggle() {
+export function ThemeToggle({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  variant?: "default" | "plain";
+}) {
   const { theme, toggleTheme } = useTheme();
   const [animating, setAnimating] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -61,10 +68,11 @@ export function ThemeToggle() {
       aria-label={label}
       title={label}
       className={cn(
-        "fixed z-[60] flex h-12 w-12 touch-manipulation items-center justify-center overflow-visible rounded-full border border-border shadow-md backdrop-blur-md transition-colors duration-300",
-        "bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))]",
-        "bg-[var(--header-bg)] text-foreground hover:brightness-105 active:scale-95",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        variant === "plain"
+          ? headerIconClass
+          : "relative z-[60] flex h-11 w-11 min-h-11 min-w-11 shrink-0 touch-manipulation items-center justify-center overflow-visible rounded-full border border-border shadow-md backdrop-blur-md bg-[var(--header-bg)] text-foreground transition-colors duration-300 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:h-10 sm:w-10 sm:min-h-10 sm:min-w-10",
+        "touch-manipulation overflow-visible active:scale-95",
+        className
       )}
     >
       <span className="relative flex h-6 w-6 items-center justify-center overflow-visible">

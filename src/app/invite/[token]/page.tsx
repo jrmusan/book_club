@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { acceptInvite } from "@/actions/auth";
 import { auth } from "@/auth";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
@@ -12,6 +13,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   if (!session?.user) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-[60]">
+          <ThemeToggle />
+        </div>
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-bold">You&apos;re invited</h1>
           <p className="mt-2 text-muted-foreground">
@@ -40,6 +44,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="fixed right-[max(1rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-[60]">
+        <ThemeToggle />
+      </div>
       <div className="max-w-md text-center">
         <h1 className="text-2xl font-bold">Invite error</h1>
         <p className="mt-2 text-muted-foreground">

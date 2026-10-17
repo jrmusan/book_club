@@ -12,6 +12,7 @@ import {
   confirmMeetingSchema,
   createBookPollSchema,
   createMeetingPollSchema,
+  rankPollSchema,
   votePollSchema,
 } from "@/lib/validations/auth";
 import type { ActionResult } from "@/actions/auth";
@@ -47,10 +48,29 @@ export async function createBookPoll(
       ? new Date(closesAtRaw).toISOString()
       : "";
 
+  const votingMode = formData.get("votingMode") === "RANKING" ? "RANKING" : "SINGLE";
+  const rankLimit = formData.get("rankLimit") === "BUDGET" ? "BUDGET" : "BOOKS";
+  const scoreMethod = formData.get("scoreMethod") === "TOP_STARS" ? "TOP_STARS" : "POINTS";
+  const maxStarsRaw = Number(formData.get("maxStars"));
+  const maxRankedRaw = Number(formData.get("maxRankedBooks"));
+  const starBudgetRaw = Number(formData.get("starBudget"));
+
   const parsed = createBookPollSchema.safeParse({
     title: formData.get("title"),
     bookIds,
     closesAt: closesAtIso,
+    votingMode,
+    rankLimit: votingMode === "RANKING" ? rankLimit : undefined,
+    scoreMethod: votingMode === "RANKING" ? scoreMethod : undefined,
+    maxStars: votingMode === "RANKING" && Number.isFinite(maxStarsRaw) ? maxStarsRaw : undefined,
+    maxRankedBooks:
+      votingMode === "RANKING" && rankLimit === "BOOKS" && Number.isFinite(maxRankedRaw)
+        ? maxRankedRaw
+        : undefined,
+    starBudget:
+      votingMode === "RANKING" && rankLimit === "BUDGET" && Number.isFinite(starBudgetRaw)
+        ? starBudgetRaw
+        : undefined,
   });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -62,6 +82,18 @@ export async function createBookPoll(
       type: "BOOK_SELECTION",
       title: parsed.data.title,
       status: "OPEN",
+      votingMode: parsed.data.votingMode,
+      maxStars: parsed.data.votingMode === "RANKING" ? parsed.data.maxStars : null,
+      maxRankedBooks:
+        parsed.data.votingMode === "RANKING" && parsed.data.rankLimit !== "BUDGET"
+          ? parsed.data.maxRankedBooks
+          : null,
+      rankLimit: parsed.data.votingMode === "RANKING" ? parsed.data.rankLimit ?? "BOOKS" : null,
+      starBudget:
+        parsed.data.votingMode === "RANKING" && parsed.data.rankLimit === "BUDGET"
+          ? parsed.data.starBudget
+          : null,
+      scoreMethod: parsed.data.votingMode === "RANKING" ? parsed.data.scoreMethod ?? "POINTS" : null,
       publishedAt: new Date(),
       closesAt: new Date(parsed.data.closesAt),
       createdById: user.id,
@@ -319,16 +351,121 @@ export async function votePoll(
     where: { id: parsed.data.optionId, pollId: poll.id },
   });
   if (!option) return { success: false, error: "Invalid option" };
+  if (poll.votingMode === "RANKING") {
+    return { success: false, error: "This poll uses star ranking" };
+  }
 
-  await db.pollVote.upsert({
-    where: { pollId_userId: { pollId: poll.id, userId: user.id } },
-    create: {
+  const existing = await db.pollVote.findFirst({
+    where: { pollId: poll.id, userId: user.id },
+    select: { id: true },
+  });
+  if (existing) return { success: false, error: "You already voted in this poll" };
+
+  await db.pollVote.create({
+    data: {
       pollId: poll.id,
       optionId: option.id,
       userId: user.id,
     },
-    update: { optionId: option.id },
   });
+
+  revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+  return { success: true };
+}
+
+export async function votePollRanking(
+  clubSlug: string,
+  formData: FormData
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let club;
+  try {
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
+  }
+
+  let ratings: unknown = [];
+  try {
+    const raw = formData.get("ratings");
+    ratings = typeof raw === "string" ? JSON.parse(raw) : [];
+  } catch {
+    return { success: false, error: "Invalid ranking" };
+  }
+
+  const parsed = rankPollSchema.safeParse({
+    pollId: formData.get("pollId"),
+    ratings,
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid ranking" };
+  }
+
+  const poll = await db.poll.findFirst({
+    where: { id: parsed.data.pollId, clubId: club.id, status: "OPEN", votingMode: "RANKING" },
+  });
+  if (!poll) return { success: false, error: "Poll is not open for ranking" };
+  const rankLimit = poll.rankLimit ?? "BOOKS";
+  if (!poll.maxStars || (rankLimit === "BOOKS" && !poll.maxRankedBooks)) {
+    return { success: false, error: "This ranking poll is missing its settings" };
+  }
+  if (rankLimit === "BUDGET" && !poll.starBudget) {
+    return { success: false, error: "This ranking poll is missing its star budget" };
+  }
+
+  if (poll.closesAt && poll.closesAt.getTime() <= Date.now()) {
+    await finalizeClosedPoll(club.id, poll.id, poll.type);
+    revalidatePath(`/clubs/${clubSlug}`);
+    revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+    return { success: false, error: "This poll has closed" };
+  }
+
+  const uniqueIds = new Set(parsed.data.ratings.map((rating) => rating.optionId));
+  if (uniqueIds.size !== parsed.data.ratings.length) {
+    return { success: false, error: "Each book can only be ranked once" };
+  }
+  if (rankLimit === "BOOKS" && parsed.data.ratings.length > poll.maxRankedBooks!) {
+    return {
+      success: false,
+      error: `You can rank up to ${poll.maxRankedBooks} book${poll.maxRankedBooks === 1 ? "" : "s"}`,
+    };
+  }
+  const starsSpent = parsed.data.ratings.reduce((sum, rating) => sum + rating.stars, 0);
+  if (rankLimit === "BUDGET" && starsSpent > poll.starBudget!) {
+    return {
+      success: false,
+      error: `You can spend up to ${poll.starBudget} star${poll.starBudget === 1 ? "" : "s"}`,
+    };
+  }
+  if (parsed.data.ratings.some((rating) => rating.stars > poll.maxStars!)) {
+    return { success: false, error: `Ratings only go up to ${poll.maxStars} stars` };
+  }
+
+  const options = await db.pollOption.findMany({
+    where: { pollId: poll.id, id: { in: [...uniqueIds] } },
+    select: { id: true },
+  });
+  if (options.length !== uniqueIds.size) {
+    return { success: false, error: "One of those books is not in this poll" };
+  }
+
+  await db.$transaction([
+    db.pollVote.deleteMany({ where: { pollId: poll.id, userId: user.id } }),
+    db.pollVote.createMany({
+      data: parsed.data.ratings.map((rating) => ({
+        pollId: poll.id,
+        optionId: rating.optionId,
+        userId: user.id,
+        stars: rating.stars,
+      })),
+    }),
+  ]);
 
   revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
   return { success: true };

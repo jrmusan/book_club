@@ -6,7 +6,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <AppHeader />
       <div className="flex-1">{children}</div>
-      <footer className="mt-10 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:mt-14 sm:pb-[env(safe-area-inset-bottom)]">
+      <footer className="mt-10 pb-[env(safe-area-inset-bottom)] sm:mt-14">
         <CozyLongWindow />
       </footer>
     </div>

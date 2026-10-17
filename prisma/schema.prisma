@@ -30,6 +30,21 @@ enum PollType {
   MEETING
 }
 
+enum PollVotingMode {
+  SINGLE
+  RANKING
+}
+
+enum PollRankLimit {
+  BOOKS
+  BUDGET
+}
+
+enum PollScoreMethod {
+  POINTS
+  TOP_STARS
+}
+
 enum PollStatus {
   DRAFT
   OPEN
@@ -156,17 +171,23 @@ model ClubBook {
 }
 
 model Poll {
-  id          String     @id @default(cuid())
-  clubId      String
-  type        PollType
-  title       String
-  status      PollStatus @default(DRAFT)
-  createdById String
-  opensAt     DateTime?
-  closesAt    DateTime?
-  publishedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id             String         @id @default(cuid())
+  clubId         String
+  type           PollType
+  title          String
+  status         PollStatus     @default(DRAFT)
+  votingMode     PollVotingMode @default(SINGLE)
+  maxStars       Int?
+  maxRankedBooks Int?
+  rankLimit      PollRankLimit?
+  starBudget     Int?
+  scoreMethod    PollScoreMethod?
+  createdById    String
+  opensAt        DateTime?
+  closesAt       DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   club      Club         @relation(fields: [clubId], references: [id], onDelete: Cascade)
   createdBy User         @relation("PollCreator", fields: [createdById], references: [id], onDelete: Cascade)
@@ -198,13 +219,15 @@ model PollVote {
   pollId    String
   optionId  String
   userId    String
+  stars     Int?
   createdAt DateTime @default(now())
 
   poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
   option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([pollId, userId])
+  @@unique([pollId, userId, optionId])
+  @@index([pollId, userId])
 }
 
 model Meeting {

@@ -36,11 +36,60 @@ const pollClosesAtSchema = z
     message: "Deadline must be within 90 days",
   });
 
-export const createBookPollSchema = z.object({
-  title: z.string().min(2).max(200),
-  bookIds: z.array(z.string()).min(2, "Add at least 2 books"),
-  closesAt: pollClosesAtSchema,
-});
+export const createBookPollSchema = z
+  .object({
+    title: z.string().min(2).max(200),
+    bookIds: z.array(z.string()).min(2, "Add at least 2 books"),
+    closesAt: pollClosesAtSchema,
+    votingMode: z.enum(["SINGLE", "RANKING"]),
+    maxStars: z.number().int().min(2).max(10).optional(),
+    maxRankedBooks: z.number().int().min(1).optional(),
+    rankLimit: z.enum(["BOOKS", "BUDGET"]).optional(),
+    starBudget: z.number().int().min(1).optional(),
+    scoreMethod: z.enum(["POINTS", "TOP_STARS"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.votingMode !== "RANKING") return;
+    if (data.maxStars == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Choose how many stars are in the scale",
+        path: ["maxStars"],
+      });
+    }
+    const limit = data.rankLimit ?? "BOOKS";
+    if (limit === "BOOKS") {
+      if (data.maxRankedBooks == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Choose how many books each person can rank",
+          path: ["maxRankedBooks"],
+        });
+      } else if (data.maxRankedBooks > data.bookIds.length) {
+        ctx.addIssue({
+          code: "custom",
+          message: `People can rank at most ${data.bookIds.length} books in this poll`,
+          path: ["maxRankedBooks"],
+        });
+      }
+    }
+    if (limit === "BUDGET") {
+      const ceiling = (data.maxStars ?? 0) * data.bookIds.length;
+      if (data.starBudget == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Choose how many stars each person can spend",
+          path: ["starBudget"],
+        });
+      } else if (ceiling > 0 && data.starBudget > ceiling) {
+        ctx.addIssue({
+          code: "custom",
+          message: `The star budget can be at most ${ceiling}`,
+          path: ["starBudget"],
+        });
+      }
+    }
+  });
 
 export const createMeetingPollSchema = z.object({
   title: z.string().min(2).max(200),
@@ -51,6 +100,18 @@ export const createMeetingPollSchema = z.object({
 export const votePollSchema = z.object({
   pollId: z.string(),
   optionId: z.string(),
+});
+
+export const rankPollSchema = z.object({
+  pollId: z.string(),
+  ratings: z
+    .array(
+      z.object({
+        optionId: z.string(),
+        stars: z.number().int().min(1).max(10),
+      })
+    )
+    .min(1, "Star at least one book"),
 });
 
 export const confirmMeetingSchema = z.object({

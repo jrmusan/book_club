@@ -17,6 +17,7 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
         id: true,
         title: true,
         type: true,
+        votingMode: true,
         status: true,
         closesAt: true,
         _count: { select: { votes: true, options: true } },
@@ -48,8 +49,13 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
                   <div>
                     <CardTitle className="text-lg">{poll.title}</CardTitle>
                     <CardDescription>
-                      {poll.type.replace("_", " ")} · {poll._count.options} options ·{" "}
-                      {poll._count.votes} votes
+                      {poll.type === "BOOK_SELECTION"
+                        ? poll.votingMode === "RANKING"
+                          ? "Star ranking"
+                          : "Single vote"
+                        : poll.type.replace("_", " ")}{" "}
+                      · {poll._count.options} options · {poll._count.votes}{" "}
+                      {poll.votingMode === "RANKING" ? "ratings" : "votes"}
                       {poll.closesAt &&
                         ` · ${
                           poll.status === "OPEN" ? "closes" : "closed"

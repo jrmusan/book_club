@@ -11,13 +11,25 @@ export const getPollResults = cache(async (pollId: string) => {
     orderBy: { sortOrder: "asc" },
   });
 
+  const starTotals = await starTotalsByOption(pollId);
+
   return options.map((o) => ({
     id: o.id,
     label: o.label,
     book: o.book,
     voteCount: o._count.votes,
+    starTotal: starTotals.get(o.id) ?? 0,
   }));
 });
+
+async function starTotalsByOption(pollId: string) {
+  const grouped = await db.pollVote.groupBy({
+    by: ["optionId"],
+    where: { pollId },
+    _sum: { stars: true },
+  });
+  return new Map(grouped.map((row) => [row.optionId, row._sum.stars ?? 0]));
+}
 
 const winningBookSelect = {
   id: true,
@@ -26,10 +38,45 @@ const winningBookSelect = {
   coverUrl: true,
 } as const;
 
+export type PollScoreMethod = "POINTS" | "TOP_STARS";
+
+export type RankingVote = {
+  optionId: string;
+  userId: string;
+  stars: number | null;
+};
+
+/** Points are the stars themselves. Top picks are each person's highest star rating. */
+export function rankingScores(votes: RankingVote[], method: PollScoreMethod) {
+  const points = new Map<string, number>();
+  const byUser = new Map<string, { optionId: string; stars: number }[]>();
+
+  for (const vote of votes) {
+    const stars = vote.stars ?? 0;
+    if (stars <= 0) continue;
+    points.set(vote.optionId, (points.get(vote.optionId) ?? 0) + stars);
+    const list = byUser.get(vote.userId) ?? [];
+    list.push({ optionId: vote.optionId, stars });
+    byUser.set(vote.userId, list);
+  }
+
+  const topPicks = new Map<string, number>();
+  for (const list of byUser.values()) {
+    const max = Math.max(...list.map((vote) => vote.stars));
+    for (const vote of list) {
+      if (vote.stars !== max) continue;
+      topPicks.set(vote.optionId, (topPicks.get(vote.optionId) ?? 0) + 1);
+    }
+  }
+
+  return { points, topPicks, score: method === "TOP_STARS" ? topPicks : points };
+}
+
 export type PollWinningBook = {
   pollId: string;
   closesAt: Date | null;
   voteCount: number;
+  scoreKind: "votes" | "points" | "top picks";
   book: {
     id: string;
     title: string;
@@ -52,11 +99,14 @@ export async function listClosedBookPollWinners(
     select: {
       id: true,
       closesAt: true,
+      votingMode: true,
+      scoreMethod: true,
       options: {
         orderBy: { sortOrder: "asc" },
         select: {
+          id: true,
           book: { select: winningBookSelect },
-          _count: { select: { votes: true } },
+          votes: { select: { stars: true, userId: true, optionId: true } },
         },
       },
     },
@@ -66,13 +116,24 @@ export async function listClosedBookPollWinners(
   const seen = new Set<string>();
 
   for (const poll of polls) {
-    const top = [...poll.options].sort((a, b) => b._count.votes - a._count.votes)[0];
+    const ranked = poll.votingMode === "RANKING";
+    const method: PollScoreMethod = poll.scoreMethod === "TOP_STARS" ? "TOP_STARS" : "POINTS";
+    const scores = rankingScores(
+      poll.options.flatMap((option) => option.votes),
+      method
+    );
+    const top = [...poll.options].sort(
+      (a, b) => (scores.score.get(b.id) ?? 0) - (scores.score.get(a.id) ?? 0)
+    )[0];
     if (!top?.book || seen.has(top.book.id)) continue;
+    const score = ranked ? (scores.score.get(top.id) ?? 0) : top.votes.length;
+    if (score <= 0) continue;
     seen.add(top.book.id);
     winners.push({
       pollId: poll.id,
       closesAt: poll.closesAt,
-      voteCount: top._count.votes,
+      voteCount: score,
+      scoreKind: !ranked ? "votes" : method === "TOP_STARS" ? "top picks" : "points",
       book: top.book,
     });
   }
@@ -81,6 +142,27 @@ export async function listClosedBookPollWinners(
 }
 
 export async function getPollWinner(pollId: string) {
+  const poll = await db.poll.findUnique({
+    where: { id: pollId },
+    select: { votingMode: true, scoreMethod: true },
+  });
+  if (!poll) return null;
+
+  if (poll.votingMode === "RANKING") {
+    const votes = await db.pollVote.findMany({
+      where: { pollId },
+      select: { optionId: true, userId: true, stars: true },
+    });
+    const method: PollScoreMethod = poll.scoreMethod === "TOP_STARS" ? "TOP_STARS" : "POINTS";
+    const scores = rankingScores(votes, method);
+    const top = [...scores.score.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (!top || top[1] <= 0) return null;
+    return db.pollOption.findUnique({
+      where: { id: top[0] },
+      include: { book: true },
+    });
+  }
+
   const votes = await db.pollVote.groupBy({
     by: ["optionId"],
     where: { pollId },

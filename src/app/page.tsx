@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Calendar, Star, Users, Vote } from "lucide-react";
 import { CozyWindow } from "@/components/cozy/cozy-window";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -12,7 +13,7 @@ export default function HomePage() {
             <BookOpen className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" strokeWidth={2.25} />
             <span className="truncate">Book Club</span>
           </div>
-          <div className="flex shrink-0 gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Button variant="ghost" size="sm" className="px-2.5 sm:px-3" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
@@ -22,6 +23,7 @@ export default function HomePage() {
                 <span className="hidden sm:inline">Get started</span>
               </Link>
             </Button>
+            <ThemeToggle />
           </div>
         </div>
       </header>

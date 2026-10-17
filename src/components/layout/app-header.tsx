@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { Bell, BookOpen, LogOut } from "lucide-react";
+import { Bell, BookOpen } from "lucide-react";
 import { signOut } from "@/auth";
+import { AccountMenu } from "@/components/layout/account-menu";
+import { headerIconClass } from "@/components/layout/header-icon";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { requireUser } from "@/lib/club-access";
 import { getUnreadNotificationCount } from "@/lib/notifications";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 /** Sync chrome so navigations aren't blocked on session/DB. */
@@ -19,28 +21,17 @@ export function AppHeader() {
           <BookOpen className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />
           <span className="truncate">Book Club</span>
         </Link>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          <Link href="/notifications" className="relative" aria-label="Notifications">
-            <Button variant="ghost" size="icon" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
-            </Button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Link href="/notifications" className={headerIconClass} aria-label="Notifications">
+            <Bell className="h-5 w-5" strokeWidth={2.25} />
             <Suspense fallback={null}>
               <NotificationBadge />
             </Suspense>
           </Link>
-          <Suspense fallback={<div className="h-5 w-20 animate-pulse rounded bg-muted" />}>
-            <HeaderUser />
+          <Suspense fallback={<div className="h-10 w-10 animate-pulse rounded-full bg-muted" />}>
+            <HeaderAccount />
           </Suspense>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <Button variant="ghost" size="icon" type="submit" aria-label="Sign out">
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </form>
+          <ThemeToggle variant="plain" />
         </div>
       </div>
     </header>
@@ -53,15 +44,19 @@ async function NotificationBadge() {
   if (unreadCount <= 0) return null;
 
   return (
-    <Badge className="absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center px-1 pointer-events-none">
+    <Badge className="pointer-events-none absolute -right-0.5 -top-0.5 h-5 min-w-5 justify-center px-1">
       {unreadCount > 99 ? "99+" : unreadCount}
     </Badge>
   );
 }
 
-async function HeaderUser() {
+async function HeaderAccount() {
   const user = await requireUser();
-  return (
-    <span className="hidden text-sm text-muted-foreground sm:inline">@{user.username}</span>
-  );
+
+  async function signOutAction() {
+    "use server";
+    await signOut({ redirectTo: "/" });
+  }
+
+  return <AccountMenu username={user.username} name={user.name} signOutAction={signOutAction} />;
 }
