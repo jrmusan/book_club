@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { votePoll } from "@/actions/polls";
 import { formatAudiobookHours } from "@/lib/books";
+import { GenreChips, GenreLegend } from "@/components/poll/genre-legend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ type PollOption = {
     pageCount: number | null;
     averageRating: number | null;
     ratingsCount: number | null;
+    genres: string[];
   } | null;
   voteCount: number;
 };
@@ -92,9 +94,13 @@ export function PollVoteForm({
 
   const totalVotes = options.reduce((sum, o) => sum + o.voteCount, 0);
   const showResults = !isOpen || !!userVoteOptionId;
+  const legendGenres = [
+    ...new Set(options.flatMap((o) => o.book?.genres ?? [])),
+  ].sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="space-y-3 sm:space-y-4">
+      <GenreLegend genres={legendGenres} />
       {options.map((option) => {
         const pct = totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0;
         const listenHint = formatAudiobookHours(option.book?.pageCount);
@@ -149,6 +155,10 @@ export function PollVoteForm({
                         <span key={item}>{item}</span>
                       ))}
                     </div>
+                  )}
+
+                  {option.book && option.book.genres.length > 0 && (
+                    <GenreChips genres={option.book.genres} className="mt-2" />
                   )}
                 </div>
               </div>

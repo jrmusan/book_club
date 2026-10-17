@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
 import { searchBooksAction, upsertBookFromSearch } from "@/actions/polls";
 import { formatAudiobookHours, type BookSearchResult } from "@/lib/books";
+import { GenreChips } from "@/components/poll/genre-legend";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,6 +125,9 @@ export function BookSearchPicker({
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
+                  )}
+                  {book.genres && book.genres.length > 0 && (
+                    <GenreChips genres={book.genres} className="mt-1.5" />
                   )}
                   {book.description && (
                     <p className="mt-1 line-clamp-2 text-xs text-muted-foreground sm:line-clamp-none">

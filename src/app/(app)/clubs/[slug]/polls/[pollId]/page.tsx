@@ -44,6 +44,7 @@ export default async function PollDetailPage({
                 pageCount: true,
                 averageRating: true,
                 ratingsCount: true,
+                genres: true,
               },
             },
             _count: { select: { votes: true } },
@@ -76,7 +77,11 @@ export default async function PollDetailPage({
     (typeof poll.options)[number]["book"]
   >[];
   const needsEnrich = books.some(
-    (b) => b.pageCount == null || b.averageRating == null || !b.description
+    (b) =>
+      b.pageCount == null ||
+      b.averageRating == null ||
+      !b.description ||
+      !b.genres?.length
   );
   if (needsEnrich) {
     await enrichBooksMissingMetadata(books);
@@ -101,6 +106,7 @@ export default async function PollDetailPage({
                   pageCount: true,
                   averageRating: true,
                   ratingsCount: true,
+                  genres: true,
                 },
               },
               _count: { select: { votes: true } },
@@ -125,6 +131,7 @@ export default async function PollDetailPage({
           pageCount: o.book.pageCount,
           averageRating: o.book.averageRating,
           ratingsCount: o.book.ratingsCount,
+          genres: o.book.genres ?? [],
         }
       : null,
     voteCount: o._count.votes,

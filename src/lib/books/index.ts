@@ -1,5 +1,6 @@
 import type { BookExternalSource } from "@prisma/client";
 import { db } from "@/lib/db";
+import { normalizeGenres } from "@/lib/books/genres";
 
 export type BookSearchResult = {
   externalSource: BookExternalSource;
@@ -13,31 +14,24 @@ export type BookSearchResult = {
   pageCount?: number;
   averageRating?: number;
   ratingsCount?: number;
+  genres?: string[];
 };
 
 type BookDetails = Partial<
   Pick<
     BookSearchResult,
-    "description" | "pageCount" | "averageRating" | "ratingsCount" | "coverUrl" | "publishedYear"
+    | "description"
+    | "pageCount"
+    | "averageRating"
+    | "ratingsCount"
+    | "coverUrl"
+    | "publishedYear"
+    | "genres"
   >
 >;
 
-/** Rough audiobook length from print pages (~30–35 pages/hour is a common rule of thumb). */
-export function estimateAudiobookHours(pageCount: number | null | undefined): number | null {
-  if (!pageCount || pageCount <= 0) return null;
-  const hours = pageCount / 32;
-  return Math.round(hours * 10) / 10;
-}
-
-export function formatAudiobookHours(pageCount: number | null | undefined): string | null {
-  const hours = estimateAudiobookHours(pageCount);
-  if (hours == null) return null;
-  if (hours < 1) return `~${Math.round(hours * 60)} min listen`;
-  const whole = Math.floor(hours);
-  const mins = Math.round((hours - whole) * 60);
-  if (mins === 0) return `~${whole} hr listen`;
-  return `~${whole} hr ${mins} min listen`;
-}
+export { formatAudiobookHours, estimateAudiobookHours } from "@/lib/books/length";
+export { normalizeGenres, genreStyle, GENRE_COLORS } from "@/lib/books/genres";
 
 function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -63,8 +57,14 @@ function needsDetails(book: {
   description?: string | null;
   pageCount?: number | null;
   averageRating?: number | null;
+  genres?: string[] | null;
 }) {
-  return !book.description || book.pageCount == null || book.averageRating == null;
+  return (
+    !book.description ||
+    book.pageCount == null ||
+    book.averageRating == null ||
+    !book.genres?.length
+  );
 }
 
 function getGoogleBooksKey() {
@@ -82,15 +82,13 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
   const url = new URL("https://www.googleapis.com/books/v1/volumes");
   url.searchParams.set("q", query);
   url.searchParams.set("maxResults", "10");
-  // Ask for the fields we need — search often omits description otherwise.
   url.searchParams.set(
     "fields",
-    "items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/description,volumeInfo/publishedDate,volumeInfo/pageCount,volumeInfo/averageRating,volumeInfo/ratingsCount,volumeInfo/industryIdentifiers,volumeInfo/imageLinks)"
+    "items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/description,volumeInfo/publishedDate,volumeInfo/pageCount,volumeInfo/averageRating,volumeInfo/ratingsCount,volumeInfo/categories,volumeInfo/industryIdentifiers,volumeInfo/imageLinks)"
   );
   if (key) url.searchParams.set("key", key);
 
   try {
-    // Don't cache failures (429/403) or we stick on empty Google results.
     const res = await fetch(url.toString(), {
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
@@ -107,6 +105,7 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
           pageCount?: number;
           averageRating?: number;
           ratingsCount?: number;
+          categories?: string[];
           industryIdentifiers?: Array<{ type: string; identifier: string }>;
           imageLinks?: { thumbnail?: string; smallThumbnail?: string };
         };
@@ -132,6 +131,7 @@ async function searchGoogleBooks(query: string): Promise<BookSearchResult[]> {
         pageCount: info.pageCount && info.pageCount > 0 ? info.pageCount : undefined,
         averageRating: info.averageRating,
         ratingsCount: info.ratingsCount,
+        genres: normalizeGenres(info.categories),
       };
     });
   } catch {
@@ -145,7 +145,7 @@ async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
   url.searchParams.set("limit", "10");
   url.searchParams.set(
     "fields",
-    "key,title,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,ratings_average,ratings_count"
+    "key,title,author_name,first_publish_year,isbn,cover_i,number_of_pages_median,ratings_average,ratings_count,subject"
   );
 
   try {
@@ -165,6 +165,7 @@ async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
         number_of_pages_median?: number;
         ratings_average?: number;
         ratings_count?: number;
+        subject?: string[];
       }>;
     };
 
@@ -186,6 +187,7 @@ async function searchOpenLibrary(query: string): Promise<BookSearchResult[]> {
             : undefined,
         averageRating: doc.ratings_average,
         ratingsCount: doc.ratings_count,
+        genres: normalizeGenres(doc.subject),
       }));
   } catch {
     return [];
@@ -208,6 +210,7 @@ async function fetchGoogleVolumeDetails(externalId: string): Promise<BookDetails
       pageCount?: number;
       averageRating?: number;
       ratingsCount?: number;
+      categories?: string[];
       imageLinks?: { thumbnail?: string };
       publishedDate?: string;
     };
@@ -221,6 +224,7 @@ async function fetchGoogleVolumeDetails(externalId: string): Promise<BookDetails
     ratingsCount: info.ratingsCount,
     coverUrl: info.imageLinks?.thumbnail?.replace("http:", "https:"),
     publishedYear: Number.isFinite(year) ? year : undefined,
+    genres: normalizeGenres(info.categories),
   };
 }
 
@@ -235,16 +239,21 @@ async function fetchOpenLibraryWorkDetails(externalId: string): Promise<BookDeta
     description?: unknown;
     covers?: number[];
     first_publish_date?: string;
+    subjects?: Array<string | { name?: string }>;
   };
   const year = data.first_publish_date
     ? parseInt(data.first_publish_date.slice(0, 4), 10)
     : undefined;
+  const subjectNames = (data.subjects ?? [])
+    .map((s) => (typeof s === "string" ? s : s.name))
+    .filter((s): s is string => Boolean(s));
   return {
     description: normalizeDescription(data.description),
     coverUrl: data.covers?.[0]
       ? `https://covers.openlibrary.org/b/id/${data.covers[0]}-M.jpg`
       : undefined,
     publishedYear: Number.isFinite(year) ? year : undefined,
+    genres: normalizeGenres(subjectNames),
   };
 }
 
@@ -270,7 +279,11 @@ async function fetchOpenLibraryByIsbn(isbn: string): Promise<BookDetails> {
   return details;
 }
 
-/** Fill description / pages / rating from the best available source. */
+function mergeGenres(a?: string[], b?: string[]) {
+  return normalizeGenres([...(a ?? []), ...(b ?? [])]);
+}
+
+/** Fill description / pages / rating / genres from the best available source. */
 export async function fillBookDetails(result: BookSearchResult): Promise<BookSearchResult> {
   let next: BookSearchResult = { ...result };
 
@@ -285,6 +298,7 @@ export async function fillBookDetails(result: BookSearchResult): Promise<BookSea
         ratingsCount: next.ratingsCount ?? details.ratingsCount,
         coverUrl: next.coverUrl ?? details.coverUrl,
         publishedYear: next.publishedYear ?? details.publishedYear,
+        genres: next.genres?.length ? next.genres : details.genres,
       };
     }
 
@@ -298,11 +312,11 @@ export async function fillBookDetails(result: BookSearchResult): Promise<BookSea
         ratingsCount: next.ratingsCount ?? details.ratingsCount,
         coverUrl: next.coverUrl ?? details.coverUrl,
         publishedYear: next.publishedYear ?? details.publishedYear,
+        genres: next.genres?.length ? next.genres : details.genres,
       };
     }
 
-    // Cross-source fallback when Google is quota-limited but we have an ISBN.
-    if (!next.description && next.isbn) {
+    if ((!next.description || !next.genres?.length) && next.isbn) {
       const details = await fetchOpenLibraryByIsbn(next.isbn);
       next = {
         ...next,
@@ -310,7 +324,12 @@ export async function fillBookDetails(result: BookSearchResult): Promise<BookSea
         pageCount: next.pageCount ?? details.pageCount,
         coverUrl: next.coverUrl ?? details.coverUrl,
         publishedYear: next.publishedYear ?? details.publishedYear,
+        genres: next.genres?.length ? next.genres : details.genres,
       };
+    }
+
+    if (next.genres?.length) {
+      next.genres = mergeGenres(next.genres);
     }
   } catch {
     // best-effort
@@ -341,6 +360,7 @@ export async function upsertBook(result: BookSearchResult) {
       pageCount: enriched.pageCount,
       averageRating: enriched.averageRating,
       ratingsCount: enriched.ratingsCount,
+      genres: enriched.genres ?? [],
     },
     update: {
       title: enriched.title,
@@ -352,6 +372,7 @@ export async function upsertBook(result: BookSearchResult) {
       ...(enriched.pageCount != null ? { pageCount: enriched.pageCount } : {}),
       ...(enriched.averageRating != null ? { averageRating: enriched.averageRating } : {}),
       ...(enriched.ratingsCount != null ? { ratingsCount: enriched.ratingsCount } : {}),
+      ...(enriched.genres?.length ? { genres: enriched.genres } : {}),
     },
   });
 }
@@ -365,7 +386,7 @@ export async function addBookToClub(clubId: string, bookId: string) {
 }
 
 /**
- * Fill in ratings / page count / description for books missing them.
+ * Fill in ratings / page count / description / genres for books missing them.
  * Best-effort; never throws.
  */
 export async function enrichBooksMissingMetadata(
@@ -377,6 +398,7 @@ export async function enrichBooksMissingMetadata(
     pageCount: number | null;
     averageRating: number | null;
     description: string | null;
+    genres?: string[] | null;
   }>
 ) {
   const needing = books.filter((b) => needsDetails(b));
@@ -394,9 +416,15 @@ export async function enrichBooksMissingMetadata(
           isbn: book.isbn ?? undefined,
           pageCount: book.pageCount ?? undefined,
           averageRating: book.averageRating ?? undefined,
+          genres: book.genres?.length ? book.genres : undefined,
         });
 
-        if (!filled.description && filled.pageCount == null && filled.averageRating == null) {
+        if (
+          !filled.description &&
+          filled.pageCount == null &&
+          filled.averageRating == null &&
+          !filled.genres?.length
+        ) {
           return;
         }
 
@@ -413,6 +441,7 @@ export async function enrichBooksMissingMetadata(
               ? { averageRating: filled.averageRating }
               : {}),
             ...(filled.ratingsCount != null ? { ratingsCount: filled.ratingsCount } : {}),
+            ...(filled.genres?.length && !book.genres?.length ? { genres: filled.genres } : {}),
           },
         });
       } catch {
