@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BookSearchPicker } from "@/components/book/book-search-picker";
+import { PollDeadlineField, defaultPollDeadline } from "@/components/poll/poll-deadline-field";
 import { createBookPoll } from "@/actions/polls";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import type { BookSearchResult } from "@/lib/books";
 export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
   const router = useRouter();
   const [selected, setSelected] = useState<(BookSearchResult & { id?: string })[]>([]);
+  const [closesAt, setClosesAt] = useState(() => defaultPollDeadline(72));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,9 +24,14 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
       setError("Add at least 2 books");
       return;
     }
+    if (!closesAt) {
+      setError("Set a voting deadline");
+      return;
+    }
     setLoading(true);
     setError(null);
     formData.set("bookIds", JSON.stringify(bookIds));
+    formData.set("closesAt", closesAt);
     const result = await createBookPoll(clubSlug, formData);
     if (!result.success) {
       setError(result.error);
@@ -47,6 +54,7 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
             <Label htmlFor="title">Poll title</Label>
             <Input id="title" name="title" required placeholder="What should we read in March?" />
           </div>
+          <PollDeadlineField value={closesAt} onChange={setClosesAt} />
           <BookSearchPicker selected={selected} onChange={setSelected} />
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">

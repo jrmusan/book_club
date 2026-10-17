@@ -8,7 +8,7 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const user = await requireUser();
 
-  const [{ membership }, polls] = await Promise.all([
+  const [, polls] = await Promise.all([
     requireClubMemberBySlug(slug, user.id),
     db.poll.findMany({
       where: { club: { slug } },
@@ -18,6 +18,7 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
         title: true,
         type: true,
         status: true,
+        closesAt: true,
         _count: { select: { votes: true, options: true } },
       },
     }),
@@ -32,13 +33,11 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               No polls yet.
-              {membership.role === "OWNER" && (
-                <p className="mt-2">
-                  <Link href={`/clubs/${slug}/polls/new`} className="text-primary hover:underline">
-                    Create your first book poll
-                  </Link>
-                </p>
-              )}
+              <p className="mt-2">
+                <Link href={`/clubs/${slug}/polls/new`} className="text-primary hover:underline">
+                  Create your first book poll
+                </Link>
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -51,6 +50,13 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
                     <CardDescription>
                       {poll.type.replace("_", " ")} · {poll._count.options} options ·{" "}
                       {poll._count.votes} votes
+                      {poll.closesAt &&
+                        ` · ${
+                          poll.status === "OPEN" ? "closes" : "closed"
+                        } ${poll.closesAt.toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}`}
                     </CardDescription>
                   </div>
                   <Badge

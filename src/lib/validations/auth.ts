@@ -25,14 +25,27 @@ export const inviteMemberSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
+const pollClosesAtSchema = z
+  .string()
+  .min(1, "Set a voting deadline")
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid deadline")
+  .refine((value) => new Date(value).getTime() > Date.now() + 60_000, {
+    message: "Deadline must be at least 1 minute from now",
+  })
+  .refine((value) => new Date(value).getTime() <= Date.now() + 90 * 24 * 60 * 60 * 1000, {
+    message: "Deadline must be within 90 days",
+  });
+
 export const createBookPollSchema = z.object({
   title: z.string().min(2).max(200),
   bookIds: z.array(z.string()).min(2, "Add at least 2 books"),
+  closesAt: pollClosesAtSchema,
 });
 
 export const createMeetingPollSchema = z.object({
   title: z.string().min(2).max(200),
   options: z.array(z.string().min(2).max(200)).min(2, "Add at least 2 options"),
+  closesAt: pollClosesAtSchema,
 });
 
 export const votePollSchema = z.object({

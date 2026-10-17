@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { enrichBooksMissingMetadata } from "@/lib/books";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { closeExpiredPoll } from "@/actions/polls";
 
 export default async function PollDetailPage({
   params,
@@ -23,6 +24,8 @@ export default async function PollDetailPage({
         title: true,
         type: true,
         status: true,
+        closesAt: true,
+        createdById: true,
         options: {
           orderBy: { sortOrder: "asc" },
           select: {
@@ -56,6 +59,16 @@ export default async function PollDetailPage({
 
   if (!poll) {
     return <p>Poll not found</p>;
+  }
+
+  let status = poll.status;
+  if (
+    status === "OPEN" &&
+    poll.closesAt &&
+    poll.closesAt.getTime() <= Date.now()
+  ) {
+    await closeExpiredPoll(slug, pollId);
+    status = "CLOSED";
   }
 
   const books = poll.options.map((o) => o.book).filter(Boolean) as NonNullable<
@@ -117,19 +130,30 @@ export default async function PollDetailPage({
   }));
   const userVote = poll.votes[0];
   const isOwner = membership.role === "OWNER";
+  const canManage = isOwner || poll.createdById === user.id;
+  const isOpen = status === "OPEN";
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{poll.title}</h1>
           <p className="text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
+          {poll.closesAt && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isOpen ? "Voting closes" : "Closed"}{" "}
+              {poll.closesAt.toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+          )}
         </div>
-        <Badge>{poll.status}</Badge>
+        <Badge>{status}</Badge>
       </div>
 
-      {isOwner && (
-        <PollActions clubSlug={slug} pollId={pollId} status={poll.status} pollType={poll.type} />
+      {canManage && (
+        <PollActions clubSlug={slug} pollId={pollId} status={status} pollType={poll.type} />
       )}
 
       <div className="mt-6">
@@ -138,11 +162,11 @@ export default async function PollDetailPage({
           pollId={pollId}
           options={results}
           userVoteOptionId={userVote?.optionId}
-          isOpen={poll.status === "OPEN"}
+          isOpen={isOpen}
         />
       </div>
 
-      {poll.status === "CLOSED" && poll.type === "MEETING" && isOwner && (
+      {status === "CLOSED" && poll.type === "MEETING" && isOwner && (
         <div className="mt-6">
           <Link
             href={`/clubs/${slug}/meetings/confirm?pollId=${pollId}`}

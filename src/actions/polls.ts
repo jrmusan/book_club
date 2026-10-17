@@ -34,17 +34,23 @@ export async function createBookPoll(
 
   let club;
   try {
-    ({ club } = await requireClubOwnerBySlug(clubSlug, user.id));
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
   }
 
   const bookIdsRaw = formData.get("bookIds");
   const bookIds = typeof bookIdsRaw === "string" ? JSON.parse(bookIdsRaw) : [];
+  const closesAtRaw = formData.get("closesAt");
+  const closesAtIso =
+    typeof closesAtRaw === "string" && closesAtRaw
+      ? new Date(closesAtRaw).toISOString()
+      : "";
 
   const parsed = createBookPollSchema.safeParse({
     title: formData.get("title"),
     bookIds,
+    closesAt: closesAtIso,
   });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -57,6 +63,7 @@ export async function createBookPoll(
       title: parsed.data.title,
       status: "OPEN",
       publishedAt: new Date(),
+      closesAt: new Date(parsed.data.closesAt),
       createdById: user.id,
       options: {
         create: parsed.data.bookIds.map((bookId, index) => ({
@@ -95,17 +102,23 @@ export async function createMeetingPoll(
 
   let club;
   try {
-    ({ club } = await requireClubOwnerBySlug(clubSlug, user.id));
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
   }
 
   const optionsRaw = formData.get("options");
   const options = typeof optionsRaw === "string" ? JSON.parse(optionsRaw) : [];
+  const closesAtRaw = formData.get("closesAt");
+  const closesAtIso =
+    typeof closesAtRaw === "string" && closesAtRaw
+      ? new Date(closesAtRaw).toISOString()
+      : "";
 
   const parsed = createMeetingPollSchema.safeParse({
     title: formData.get("title"),
     options,
+    closesAt: closesAtIso,
   });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -118,6 +131,7 @@ export async function createMeetingPoll(
       title: parsed.data.title,
       status: "OPEN",
       publishedAt: new Date(),
+      closesAt: new Date(parsed.data.closesAt),
       createdById: user.id,
       options: {
         create: parsed.data.options.map((label, index) => ({
@@ -182,7 +196,25 @@ export async function publishPoll(clubSlug: string, pollId: string): Promise<Act
   return { success: true };
 }
 
-export async function closePoll(clubSlug: string, pollId: string): Promise<ActionResult> {
+async function finalizeClosedPoll(clubId: string, pollId: string, pollType: "BOOK_SELECTION" | "MEETING") {
+  await db.poll.update({
+    where: { id: pollId },
+    data: { status: "CLOSED" },
+  });
+
+  if (pollType === "BOOK_SELECTION") {
+    const winner = await getPollWinner(pollId);
+    if (winner?.bookId) {
+      await addBookToClub(clubId, winner.bookId);
+    }
+  }
+}
+
+/** Close a poll when its deadline has passed — any member viewing can trigger this. */
+export async function closeExpiredPoll(
+  clubSlug: string,
+  pollId: string
+): Promise<ActionResult> {
   let user;
   try {
     user = await requireUser();
@@ -192,28 +224,53 @@ export async function closePoll(clubSlug: string, pollId: string): Promise<Actio
 
   let club;
   try {
-    ({ club } = await requireClubOwnerBySlug(clubSlug, user.id));
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
+  }
+
+  const poll = await db.poll.findFirst({
+    where: { id: pollId, clubId: club.id, status: "OPEN" },
+  });
+  if (!poll) return { success: true };
+  if (!poll.closesAt || poll.closesAt.getTime() > Date.now()) {
+    return { success: true };
+  }
+
+  await finalizeClosedPoll(club.id, pollId, poll.type);
+  revalidatePath(`/clubs/${clubSlug}`);
+  revalidatePath(`/clubs/${clubSlug}/polls/${pollId}`);
+  return { success: true };
+}
+
+export async function closePoll(clubSlug: string, pollId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let club;
+  let membership;
+  try {
+    ({ club, membership } = await requireClubMemberBySlug(clubSlug, user.id));
   } catch (e) {
     return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
   }
 
   const poll = await db.poll.findFirst({
     where: { id: pollId, clubId: club.id },
-    include: { options: { include: { book: true } } },
   });
   if (!poll) return { success: false, error: "Poll not found" };
+  if (poll.status !== "OPEN") return { success: false, error: "Poll is not open" };
 
-  await db.poll.update({
-    where: { id: pollId },
-    data: { status: "CLOSED", closesAt: new Date() },
-  });
-
-  if (poll.type === "BOOK_SELECTION") {
-    const winner = await getPollWinner(pollId);
-    if (winner?.bookId) {
-      await addBookToClub(club.id, winner.bookId);
-    }
+  const canClose = membership.role === "OWNER" || poll.createdById === user.id;
+  if (!canClose) {
+    return { success: false, error: "Only the poll creator or club owner can close this poll" };
   }
+
+  await finalizeClosedPoll(club.id, pollId, poll.type);
 
   revalidatePath(`/clubs/${clubSlug}`);
   revalidatePath(`/clubs/${clubSlug}/polls/${pollId}`);
@@ -250,6 +307,13 @@ export async function votePoll(
     where: { id: parsed.data.pollId, clubId: club.id, status: "OPEN" },
   });
   if (!poll) return { success: false, error: "Poll is not open for voting" };
+
+  if (poll.closesAt && poll.closesAt.getTime() <= Date.now()) {
+    await finalizeClosedPoll(club.id, poll.id, poll.type);
+    revalidatePath(`/clubs/${clubSlug}`);
+    revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+    return { success: false, error: "This poll has closed" };
+  }
 
   const option = await db.pollOption.findFirst({
     where: { id: parsed.data.optionId, pollId: poll.id },

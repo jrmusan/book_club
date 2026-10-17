@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, X } from "lucide-react";
+import { PollDeadlineField, defaultPollDeadline } from "@/components/poll/poll-deadline-field";
 import { createMeetingPoll } from "@/actions/polls";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
   const router = useRouter();
   const [options, setOptions] = useState(["", ""]);
+  const [closesAt, setClosesAt] = useState(() => defaultPollDeadline(72));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,9 +27,14 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
       setError("Add at least 2 meeting options");
       return;
     }
+    if (!closesAt) {
+      setError("Set a voting deadline");
+      return;
+    }
     setLoading(true);
     setError(null);
     formData.set("options", JSON.stringify(validOptions));
+    formData.set("closesAt", closesAt);
     const result = await createMeetingPoll(clubSlug, formData);
     if (!result.success) {
       setError(result.error);
@@ -50,6 +57,7 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
             <Label htmlFor="title">Poll title</Label>
             <Input id="title" name="title" required placeholder="March meetup — when & where?" />
           </div>
+          <PollDeadlineField value={closesAt} onChange={setClosesAt} />
           <div className="space-y-3">
             <Label>Options</Label>
             {options.map((option, index) => (

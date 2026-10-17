@@ -8,7 +8,7 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
   const { slug } = await params;
   const user = await requireUser();
 
-  const [{ membership }, meetings] = await Promise.all([
+  const [, meetings] = await Promise.all([
     requireClubMemberBySlug(slug, user.id),
     db.meeting.findMany({
       where: { club: { slug } },
@@ -23,7 +23,6 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
     }),
   ]);
 
-  const isOwner = membership.role === "OWNER";
   const now = new Date();
   const upcoming = meetings.filter((m) => m.scheduledAt >= now);
   const past = meetings.filter((m) => m.scheduledAt < now);
@@ -32,11 +31,9 @@ export default async function MeetingsPage({ params }: { params: Promise<{ slug:
     <>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Meetings</h1>
-        {isOwner && (
-          <Button asChild>
-            <Link href={`/clubs/${slug}/meetings/new`}>New meeting poll</Link>
-          </Button>
-        )}
+        <Button asChild>
+          <Link href={`/clubs/${slug}/meetings/new`}>New meeting poll</Link>
+        </Button>
       </div>
 
       <div className="space-y-8">

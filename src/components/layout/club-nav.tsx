@@ -44,14 +44,12 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
           </Link>
         );
       })}
-      {isOwner && (
-        <Link
-          href={`${base}/polls/new`}
-          className="ml-auto inline-flex items-center gap-2 rounded-2xl bg-rose px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:brightness-105"
-        >
-          New poll
-        </Link>
-      )}
+      <Link
+        href={`${base}/polls/new`}
+        className="ml-auto inline-flex items-center gap-2 rounded-2xl bg-rose px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:brightness-105"
+      >
+        New poll
+      </Link>
     </nav>
   );
 }
