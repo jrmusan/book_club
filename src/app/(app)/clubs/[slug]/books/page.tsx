@@ -1,16 +1,21 @@
+import { BookNotes } from "@/components/book/book-notes";
 import { BookRatingForm } from "@/components/book/book-rating-form";
 import { MemberReviews } from "@/components/book/member-reviews";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listClubBookNotes, notesForBook } from "@/lib/book-notes";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { listClosedBookPollWinners } from "@/lib/polls";
 import { truncate } from "@/lib/utils";
 
 export default async function BooksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
 
-  const [, clubBooks] = await Promise.all([
+  const [, winners, notes, clubBooks] = await Promise.all([
     requireClubMemberBySlug(slug, user.id),
+    listClosedBookPollWinners({ slug }),
+    listClubBookNotes(slug),
     db.clubBook.findMany({
       where: { club: { slug } },
       orderBy: { addedAt: "desc" },
@@ -54,6 +59,8 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
         ) : (
           clubBooks.map(({ book }) => {
             const userRating = book.bookRatings.find((r) => r.userId === user.id);
+            const wonPoll = winners.some((winner) => winner.book.id === book.id);
+            const bookNotes = wonPoll ? notesForBook(notes, book.id, user.id) : null;
             const memberReviews = book.bookRatings.map((r) => ({
               id: r.id,
               rating: r.rating,
@@ -64,7 +71,7 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
             }));
 
             return (
-              <Card key={book.id}>
+              <Card key={book.id} id={`book-${book.id}`} className="scroll-mt-24">
                 <CardHeader className="p-4 sm:p-6">
                   <div className="flex gap-3 sm:gap-4">
                     {book.coverUrl && (
@@ -87,6 +94,16 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {bookNotes && (
+                    <div className="border-b border-border pb-6">
+                      <BookNotes
+                        clubSlug={slug}
+                        bookId={book.id}
+                        initialBody={bookNotes.initialBody}
+                        others={bookNotes.others}
+                      />
+                    </div>
+                  )}
                   <BookRatingForm
                     clubSlug={slug}
                     bookId={book.id}

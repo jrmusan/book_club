@@ -19,6 +19,67 @@ export const getPollResults = cache(async (pollId: string) => {
   }));
 });
 
+const winningBookSelect = {
+  id: true,
+  title: true,
+  authors: true,
+  coverUrl: true,
+} as const;
+
+export type PollWinningBook = {
+  pollId: string;
+  closesAt: Date | null;
+  voteCount: number;
+  book: {
+    id: string;
+    title: string;
+    authors: string[];
+    coverUrl: string | null;
+  };
+};
+
+/** Books that won a closed book-selection poll, newest poll first. */
+export async function listClosedBookPollWinners(
+  club: { id: string } | { slug: string }
+): Promise<PollWinningBook[]> {
+  const polls = await db.poll.findMany({
+    where: {
+      status: "CLOSED",
+      type: "BOOK_SELECTION",
+      ...("id" in club ? { clubId: club.id } : { club: { slug: club.slug } }),
+    },
+    orderBy: [{ closesAt: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      closesAt: true,
+      options: {
+        orderBy: { sortOrder: "asc" },
+        select: {
+          book: { select: winningBookSelect },
+          _count: { select: { votes: true } },
+        },
+      },
+    },
+  });
+
+  const winners: PollWinningBook[] = [];
+  const seen = new Set<string>();
+
+  for (const poll of polls) {
+    const top = [...poll.options].sort((a, b) => b._count.votes - a._count.votes)[0];
+    if (!top?.book || seen.has(top.book.id)) continue;
+    seen.add(top.book.id);
+    winners.push({
+      pollId: poll.id,
+      closesAt: poll.closesAt,
+      voteCount: top._count.votes,
+      book: top.book,
+    });
+  }
+
+  return winners;
+}
+
 export async function getPollWinner(pollId: string) {
   const votes = await db.pollVote.groupBy({
     by: ["optionId"],

@@ -32,7 +32,6 @@
   --wash-rose: rgba(201, 137, 122, 0.14);
   --wash-sage: rgba(125, 155, 122, 0.12);
   --sparkle-opacity: 0.55;
-  --bookshelf-opacity: 0.65;
   --radius: 1rem;
 }
 
@@ -68,7 +67,6 @@
   --wash-rose: rgba(212, 160, 148, 0.1);
   --wash-sage: rgba(155, 181, 152, 0.1);
   --sparkle-opacity: 0.35;
-  --bookshelf-opacity: 0.45;
 }
 
 @theme inline {
@@ -325,9 +323,4 @@ h3,
     background-color 0.45s ease,
     border-color 0.45s ease,
     box-shadow 0.45s ease;
-}
-
-.bookshelf-deco {
-  opacity: var(--bookshelf-opacity);
-  transition: opacity 0.45s ease;
 }

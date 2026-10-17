@@ -66,6 +66,11 @@ export const bookRatingSchema = z.object({
   review: z.string().max(2000).optional(),
 });
 
+export const bookNoteSchema = z.object({
+  bookId: z.string().min(1),
+  body: z.string().max(8000, "Notes must be 8,000 characters or fewer"),
+});
+
 export const bookRankingSchema = z.object({
   rankings: z.array(
     z.object({

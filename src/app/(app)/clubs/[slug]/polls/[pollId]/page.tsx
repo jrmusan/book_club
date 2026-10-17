@@ -140,6 +140,11 @@ export default async function PollDetailPage({
   const isOwner = membership.role === "OWNER";
   const canManage = isOwner || poll.createdById === user.id;
   const isOpen = status === "OPEN";
+  const winningBook =
+    status === "CLOSED" && poll.type === "BOOK_SELECTION"
+      ? [...results].filter((option) => option.book).sort((a, b) => b.voteCount - a.voteCount)[0]
+          ?.book
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl pb-20 sm:pb-0">
@@ -175,6 +180,17 @@ export default async function PollDetailPage({
           isOpen={isOpen}
         />
       </div>
+
+      {winningBook && (
+        <div className="mt-6">
+          <Link
+            href={`/clubs/${slug}/books#book-${winningBook.id}`}
+            className="text-primary hover:underline"
+          >
+            Reading notes for {winningBook.title} →
+          </Link>
+        </div>
+      )}
 
       {status === "CLOSED" && poll.type === "MEETING" && isOwner && (
         <div className="mt-6">

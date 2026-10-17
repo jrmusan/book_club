@@ -59,6 +59,7 @@ model User {
   pollVotes     PollVote[]
   bookRatings   BookRating[]
   bookRankings  BookRanking[]
+  bookNotes     BookNote[]
   notifications Notification[]
 }
 
@@ -78,6 +79,7 @@ model Club {
   meetings    Meeting[]
   bookRatings BookRating[]
   bookRankings BookRanking[]
+  bookNotes   BookNote[]
   clubBooks   ClubBook[]
   notifications Notification[]
 }
@@ -136,6 +138,7 @@ model Book {
   clubBooks    ClubBook[]
   bookRatings  BookRating[]
   bookRankings BookRanking[]
+  bookNotes    BookNote[]
 
   @@unique([externalSource, externalId])
 }
@@ -221,6 +224,23 @@ model Meeting {
 
   @@index([clubId])
   @@index([clubId, scheduledAt])
+}
+
+model BookNote {
+  id        String   @id @default(cuid())
+  clubId    String
+  userId    String
+  bookId    String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, userId, bookId])
+  @@index([clubId, bookId])
 }
 
 model BookRating {

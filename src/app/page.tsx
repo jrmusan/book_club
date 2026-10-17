@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BookOpen, Calendar, Star, Users, Vote } from "lucide-react";
-import { CozyWindow } from "@/components/landing/cozy-window";
+import { CozyWindow } from "@/components/cozy/cozy-window";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {

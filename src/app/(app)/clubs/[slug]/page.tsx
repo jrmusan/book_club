@@ -1,16 +1,19 @@
 import Link from "next/link";
+import { BookNotes } from "@/components/book/book-notes";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { listClubBookNotes, notesForBook } from "@/lib/book-notes";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { listClosedBookPollWinners } from "@/lib/polls";
 
 export default async function ClubPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
 
   // Membership + page data in one round-trip wave (queries filter by slug).
-  const [{ club, membership }, openPolls, upcomingMeetings, recentClosedPoll] = await Promise.all([
+  const [{ club, membership }, openPolls, upcomingMeetings, winners, notes] = await Promise.all([
     requireClubMemberBySlug(slug, user.id),
     db.poll.findMany({
       where: { club: { slug }, status: "OPEN" },
@@ -24,37 +27,13 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
       take: 3,
       select: { id: true, title: true, scheduledAt: true, location: true },
     }),
-    db.poll.findFirst({
-      where: { club: { slug }, status: "CLOSED", type: "BOOK_SELECTION" },
-      orderBy: { closesAt: "desc" },
-      select: {
-        options: {
-          select: {
-            book: {
-              select: {
-                id: true,
-                title: true,
-                authors: true,
-                coverUrl: true,
-              },
-            },
-            _count: { select: { votes: true } },
-          },
-        },
-      },
-    }),
+    listClosedBookPollWinners({ slug }),
+    listClubBookNotes(slug),
   ]);
 
   const isOwner = membership.role === "OWNER";
-
-  const winner = recentClosedPoll
-    ? [...recentClosedPoll.options]
-        .map((o) => ({
-          book: o.book,
-          voteCount: o._count.votes,
-        }))
-        .sort((a, b) => b.voteCount - a.voteCount)[0]
-    : null;
+  const winner = winners[0] ?? null;
+  const pickNotes = winner ? notesForBook(notes, winner.book.id, user.id) : null;
 
   return (
     <>
@@ -118,25 +97,37 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
           </CardContent>
         </Card>
 
-        {winner?.book && (
+        {winner && (
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Latest book pick</CardTitle>
               <CardDescription>From the most recent closed poll</CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-4">
-              {winner.book.coverUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={winner.book.coverUrl}
-                  alt={winner.book.title}
-                  className="h-32 w-24 rounded object-cover"
-                />
-              )}
-              <div>
-                <p className="text-lg font-semibold">{winner.book.title}</p>
-                <p className="text-sm text-muted-foreground">{winner.book.authors.join(", ")}</p>
-                <p className="mt-2 text-sm">{winner.voteCount} votes</p>
+            <CardContent className="space-y-6">
+              <div className="flex gap-4">
+                {winner.book.coverUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={winner.book.coverUrl}
+                    alt={winner.book.title}
+                    className="h-32 w-24 rounded object-cover"
+                  />
+                )}
+                <div>
+                  <p className="text-lg font-semibold">{winner.book.title}</p>
+                  <p className="text-sm text-muted-foreground">{winner.book.authors.join(", ")}</p>
+                  <p className="mt-2 text-sm">{winner.voteCount} votes</p>
+                </div>
+              </div>
+              <div className="border-t border-border pt-6">
+                {pickNotes && (
+                  <BookNotes
+                    clubSlug={slug}
+                    bookId={winner.book.id}
+                    initialBody={pickNotes.initialBody}
+                    others={pickNotes.others}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
