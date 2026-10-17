@@ -120,7 +120,7 @@ export function PollVoteForm({
   userRatings = [],
   votingMode = "SINGLE",
   maxStars = 3,
-  maxRankedBooks = 1,
+  maxRankedBooks = null,
   rankLimit = "BOOKS",
   starBudget = 0,
   scoreMethod = "POINTS",
@@ -133,7 +133,7 @@ export function PollVoteForm({
   userRatings?: { optionId: string; stars: number }[];
   votingMode?: "SINGLE" | "RANKING";
   maxStars?: number;
-  maxRankedBooks?: number;
+  maxRankedBooks?: number | null;
   rankLimit?: "BOOKS" | "BUDGET";
   starBudget?: number;
   scoreMethod?: "POINTS" | "TOP_STARS";
@@ -151,6 +151,7 @@ export function PollVoteForm({
   const starsSpent = Object.values(ratings).reduce((sum, stars) => sum + stars, 0);
   const starsLeft = Math.max(0, starBudget - starsSpent);
   const budgetMode = rankLimit === "BUDGET";
+  const bookCap = !budgetMode && maxRankedBooks != null && maxRankedBooks > 0 ? maxRankedBooks : null;
 
   async function handleVote() {
     if (!selected) return;
@@ -190,9 +191,9 @@ export function PollVoteForm({
         );
         return;
       }
-    } else if (!(optionId in ratings) && rankedCount >= maxRankedBooks) {
+    } else if (bookCap != null && !(optionId in ratings) && rankedCount >= bookCap) {
       setError(
-        `You can rank up to ${maxRankedBooks} book${maxRankedBooks === 1 ? "" : "s"}. Clear one to star another.`
+        `You can rank up to ${bookCap} book${bookCap === 1 ? "" : "s"}. Clear one to star another.`
       );
       return;
     }
@@ -239,7 +240,9 @@ export function PollVoteForm({
         <p className="text-sm text-muted-foreground">
           {budgetMode
             ? `You have ${starBudget} stars to spend. ${maxStars} stars on one book is ${maxStars} points and leaves the rest for other books.`
-            : `Star up to ${maxRankedBooks} ${maxRankedBooks === 1 ? "book" : "books"}. ${maxStars} ${maxStars === 1 ? "star" : "stars"} means most interested.`}
+            : bookCap != null
+              ? `Star up to ${bookCap} ${bookCap === 1 ? "book" : "books"}. ${maxStars} ${maxStars === 1 ? "star" : "stars"} means most interested.`
+              : `Rate every book however you want, including ${maxStars} ${maxStars === 1 ? "star" : "stars"} on all of them. ${maxStars} ${maxStars === 1 ? "star" : "stars"} means most interested.`}
           {scoreMethod === "TOP_STARS"
             ? " Your highest stars are your strongest vote, and the book with the most of those wins."
             : " The book with the most points wins."}
@@ -363,11 +366,11 @@ export function PollVoteForm({
       {isOpen && (ranking || !userVoteOptionId) && (
         <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/70 bg-[var(--header-bg)] px-4 py-3 backdrop-blur-md transition-colors duration-300 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
           {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-          {ranking && (
+          {ranking && (budgetMode || bookCap != null) && (
             <p className="mb-2 text-xs text-muted-foreground">
               {budgetMode
                 ? `${starsSpent} of ${starBudget} stars used · ${starsLeft} left`
-                : `${rankedCount} of ${maxRankedBooks} books ranked`}
+                : `${rankedCount} of ${bookCap} books ranked`}
             </p>
           )}
           <Button

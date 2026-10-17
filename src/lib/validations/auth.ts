@@ -42,7 +42,7 @@ export const createBookPollSchema = z
     bookIds: z.array(z.string()).min(2, "Add at least 2 books"),
     closesAt: pollClosesAtSchema,
     votingMode: z.enum(["SINGLE", "RANKING"]),
-    maxStars: z.number().int().min(2).max(10).optional(),
+    maxStars: z.number().int().min(2).max(5).optional(),
     maxRankedBooks: z.number().int().min(1).optional(),
     rankLimit: z.enum(["BOOKS", "BUDGET"]).optional(),
     starBudget: z.number().int().min(1).optional(),
@@ -58,20 +58,16 @@ export const createBookPollSchema = z
       });
     }
     const limit = data.rankLimit ?? "BOOKS";
-    if (limit === "BOOKS") {
-      if (data.maxRankedBooks == null) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Choose how many books each person can rank",
-          path: ["maxRankedBooks"],
-        });
-      } else if (data.maxRankedBooks > data.bookIds.length) {
-        ctx.addIssue({
-          code: "custom",
-          message: `People can rank at most ${data.bookIds.length} books in this poll`,
-          path: ["maxRankedBooks"],
-        });
-      }
+    if (
+      limit === "BOOKS" &&
+      data.maxRankedBooks != null &&
+      data.maxRankedBooks > data.bookIds.length
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: `People can rank at most ${data.bookIds.length} books in this poll`,
+        path: ["maxRankedBooks"],
+      });
     }
     if (limit === "BUDGET") {
       const ceiling = (data.maxStars ?? 0) * data.bookIds.length;

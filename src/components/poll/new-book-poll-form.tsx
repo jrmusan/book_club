@@ -17,6 +17,34 @@ type VotingMode = "SINGLE" | "RANKING";
 type RankLimit = "BOOKS" | "BUDGET";
 type ScoreMethod = "POINTS" | "TOP_STARS";
 
+function starWord(count: number) {
+  return count === 1 ? "star" : "stars";
+}
+
+const MAX_STAR_SCALE = 5;
+
+function validScale(maxStars: number) {
+  return Number.isInteger(maxStars) && maxStars >= 2 && maxStars <= MAX_STAR_SCALE ? maxStars : null;
+}
+
+function budgetSpendExample(budget: number, scale: number | null) {
+  if (!Number.isInteger(budget) || budget < 1 || scale == null) return null;
+  const spends: number[] = [];
+  let left = budget;
+  let next = scale;
+  while (left > 0 && spends.length < 6) {
+    const spend = Math.min(next, left);
+    spends.push(spend);
+    left -= spend;
+    next = Math.max(1, next - 1);
+  }
+  const list = spends.join(", then ");
+  if (left > 0) {
+    return `A budget of ${budget} on a ${scale}-star scale can start as ${list}, and so on.`;
+  }
+  return `A budget of ${budget} on a ${scale}-star scale can be spent as ${list}.`;
+}
+
 function ChoiceButton({
   pressed,
   title,
@@ -50,12 +78,12 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
   const [closesAt, setClosesAt] = useState(() => defaultPollDeadline(72));
   const [votingMode, setVotingMode] = useState<VotingMode>("SINGLE");
   const [maxStars, setMaxStars] = useState(3);
-  const [maxRankedBooks, setMaxRankedBooks] = useState(3);
   const [rankLimit, setRankLimit] = useState<RankLimit>("BOOKS");
   const [starBudget, setStarBudget] = useState(6);
   const [scoreMethod, setScoreMethod] = useState<ScoreMethod>("POINTS");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const scale = validScale(maxStars);
 
   async function handleSubmit(formData: FormData) {
     const bookIds = selected.map((b) => b.id).filter(Boolean) as string[];
@@ -68,12 +96,8 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
       return;
     }
     if (votingMode === "RANKING") {
-      if (maxStars < 2 || maxStars > 10) {
-        setError("Star scale must be between 2 and 10");
-        return;
-      }
-      if (rankLimit === "BOOKS" && (maxRankedBooks < 1 || maxRankedBooks > bookIds.length)) {
-        setError(`Each person can rank between 1 and ${bookIds.length} books`);
+      if (maxStars < 2 || maxStars > MAX_STAR_SCALE) {
+        setError(`Star scale must be between 2 and ${MAX_STAR_SCALE}`);
         return;
       }
       const ceiling = maxStars * bookIds.length;
@@ -88,7 +112,6 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
     formData.set("closesAt", closesAt);
     formData.set("votingMode", votingMode);
     formData.set("maxStars", String(maxStars));
-    formData.set("maxRankedBooks", String(maxRankedBooks));
     formData.set("rankLimit", rankLimit);
     formData.set("starBudget", String(starBudget));
     formData.set("scoreMethod", scoreMethod);
@@ -136,18 +159,20 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
                 <div className="space-y-2">
                   <Label htmlFor="maxStars">Star scale</Label>
                   <p className="text-sm text-muted-foreground">
-                    {`${maxStars} ${maxStars === 1 ? "star" : "stars"} means most interested. Empty stars mean they have not ranked that book.`}
+                    {scale
+                      ? `People rate each book from 1 to ${scale} ${starWord(scale)}. ${scale} ${starWord(scale)} means most interested, and a blank book has not been ranked.`
+                      : `Choose a scale from 2 to ${MAX_STAR_SCALE} stars.`}
                   </p>
                   <Input
                     id="maxStars"
                     type="number"
                     min={2}
-                    max={10}
+                    max={MAX_STAR_SCALE}
                     value={maxStars}
                     onChange={(event) => setMaxStars(Number(event.target.value))}
                   />
                   <div className="flex flex-wrap gap-1 pt-1" aria-hidden>
-                    {Array.from({ length: Math.min(Math.max(maxStars, 0), 10) }, (_, index) => (
+                    {Array.from({ length: Math.min(Math.max(maxStars, 0), MAX_STAR_SCALE) }, (_, index) => (
                       <Star key={index} className="h-5 w-5 fill-gold text-gold" />
                     ))}
                   </div>
@@ -158,39 +183,42 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
                     <ChoiceButton
                       pressed={rankLimit === "BOOKS"}
                       onClick={() => setRankLimit("BOOKS")}
-                      title="Limit by books"
-                      detail="Each person can star only a set number of books."
+                      title="Rate freely"
+                      detail={
+                        scale
+                          ? `Rate every book however you want. Every book can get ${scale} ${starWord(scale)}.`
+                          : "Rate every book however you want, including the top rating on all of them."
+                      }
                     />
                     <ChoiceButton
                       pressed={rankLimit === "BUDGET"}
                       onClick={() => setRankLimit("BUDGET")}
                       title="Star budget"
-                      detail="Stars are spent. Using 3 on one book leaves fewer for the rest."
+                      detail={
+                        scale
+                          ? `Stars are spent from one pool. Using ${scale} on one book leaves fewer for the rest.`
+                          : "Stars are spent from one pool. A high rating on one book leaves fewer for the rest."
+                      }
                     />
                   </div>
                   {rankLimit === "BOOKS" ? (
-                    <div className="space-y-2 pt-1">
-                      <Label htmlFor="maxRankedBooks">Books each person can rank</Label>
-                      <Input
-                        id="maxRankedBooks"
-                        type="number"
-                        min={1}
-                        max={Math.max(selected.length, 1)}
-                        value={maxRankedBooks}
-                        onChange={(event) => setMaxRankedBooks(Number(event.target.value))}
-                      />
-                    </div>
+                    <p className="pt-1 text-sm text-muted-foreground">
+                      {scale
+                        ? `There is no cap. Someone can give ${scale} ${starWord(scale)} to every book, or give each book a different rating.`
+                        : "There is no cap. Someone can give the top rating to every book, or mix ratings."}
+                    </p>
                   ) : (
                     <div className="space-y-2 pt-1">
                       <Label htmlFor="starBudget">Stars each person can spend</Label>
                       <p className="text-sm text-muted-foreground">
-                        A budget of 6 with a 3-star scale can be spent as 3, then 2, then 1.
+                        {budgetSpendExample(starBudget, scale) ??
+                          "Set a star scale first, then choose how many stars each person can spend."}
                       </p>
                       <Input
                         id="starBudget"
                         type="number"
                         min={1}
-                        max={Math.max(maxStars * Math.max(selected.length, 1), 1)}
+                        max={Math.max((scale ?? 1) * Math.max(selected.length, 1), 1)}
                         value={starBudget}
                         onChange={(event) => setStarBudget(Number(event.target.value))}
                       />
@@ -204,13 +232,21 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
                       pressed={scoreMethod === "POINTS"}
                       onClick={() => setScoreMethod("POINTS")}
                       title="Total points"
-                      detail="3 stars is 3 points. 5 stars is 5 points. Most points wins."
+                      detail={
+                        scale
+                          ? `Each star is 1 point. A 1-star rating is 1 point, and a ${scale}-star rating is ${scale} points. Every rating adds up, and the book with the most points wins.`
+                          : "Each star is 1 point. Every rating adds up, and the book with the most points wins."
+                      }
                     />
                     <ChoiceButton
                       pressed={scoreMethod === "TOP_STARS"}
                       onClick={() => setScoreMethod("TOP_STARS")}
                       title="Most top stars"
-                      detail="Each person's highest stars are their strongest vote. Most of those wins."
+                      detail={
+                        scale
+                          ? `Each person's highest rating, up to ${scale} ${starWord(scale)}, is their strongest vote. The book with the most of those top ratings wins.`
+                          : "Each person's highest rating is their strongest vote. The book with the most of those top ratings wins."
+                      }
                     />
                   </div>
                 </div>

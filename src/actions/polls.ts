@@ -52,7 +52,9 @@ export async function createBookPoll(
   const rankLimit = formData.get("rankLimit") === "BUDGET" ? "BUDGET" : "BOOKS";
   const scoreMethod = formData.get("scoreMethod") === "TOP_STARS" ? "TOP_STARS" : "POINTS";
   const maxStarsRaw = Number(formData.get("maxStars"));
-  const maxRankedRaw = Number(formData.get("maxRankedBooks"));
+  const maxRankedField = formData.get("maxRankedBooks");
+  const maxRankedRaw =
+    typeof maxRankedField === "string" && maxRankedField !== "" ? Number(maxRankedField) : Number.NaN;
   const starBudgetRaw = Number(formData.get("starBudget"));
 
   const parsed = createBookPollSchema.safeParse({
@@ -412,7 +414,7 @@ export async function votePollRanking(
   });
   if (!poll) return { success: false, error: "Poll is not open for ranking" };
   const rankLimit = poll.rankLimit ?? "BOOKS";
-  if (!poll.maxStars || (rankLimit === "BOOKS" && !poll.maxRankedBooks)) {
+  if (!poll.maxStars) {
     return { success: false, error: "This ranking poll is missing its settings" };
   }
   if (rankLimit === "BUDGET" && !poll.starBudget) {
@@ -430,7 +432,11 @@ export async function votePollRanking(
   if (uniqueIds.size !== parsed.data.ratings.length) {
     return { success: false, error: "Each book can only be ranked once" };
   }
-  if (rankLimit === "BOOKS" && parsed.data.ratings.length > poll.maxRankedBooks!) {
+  if (
+    rankLimit === "BOOKS" &&
+    poll.maxRankedBooks != null &&
+    parsed.data.ratings.length > poll.maxRankedBooks
+  ) {
     return {
       success: false,
       error: `You can rank up to ${poll.maxRankedBooks} book${poll.maxRankedBooks === 1 ? "" : "s"}`,

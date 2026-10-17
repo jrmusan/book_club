@@ -183,7 +183,9 @@ export default async function PollDetailPage({
               ? ` · Star ranking · ${
                   rankLimit === "BUDGET"
                     ? `${poll.starBudget} stars to spend`
-                    : `up to ${poll.maxRankedBooks} book${poll.maxRankedBooks === 1 ? "" : "s"}`
+                    : poll.maxRankedBooks
+                      ? `up to ${poll.maxRankedBooks} book${poll.maxRankedBooks === 1 ? "" : "s"}`
+                      : "rate any book"
                 } · ${poll.maxStars}-star scale · ${scoreMethod === "TOP_STARS" ? "most top stars" : "most points"}`
               : poll.type === "BOOK_SELECTION"
                 ? " · Single vote"
@@ -216,7 +218,7 @@ export default async function PollDetailPage({
           )}
           votingMode={poll.votingMode}
           maxStars={poll.maxStars ?? 3}
-          maxRankedBooks={poll.maxRankedBooks ?? 1}
+          maxRankedBooks={poll.maxRankedBooks}
           rankLimit={rankLimit}
           starBudget={poll.starBudget ?? 0}
           scoreMethod={scoreMethod}
