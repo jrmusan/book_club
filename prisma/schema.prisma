@@ -125,6 +125,9 @@ model Book {
   coverUrl       String?
   isbn           String?
   publishedYear  Int?
+  pageCount      Int?
+  averageRating  Float?
+  ratingsCount   Int?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

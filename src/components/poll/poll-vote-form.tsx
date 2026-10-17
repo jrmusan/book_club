@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Star } from "lucide-react";
 import { votePoll } from "@/actions/polls";
+import { formatAudiobookHours } from "@/lib/books";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, truncate } from "@/lib/utils";
@@ -16,6 +18,9 @@ type PollOption = {
     authors: string[];
     description: string | null;
     coverUrl: string | null;
+    pageCount: number | null;
+    averageRating: number | null;
+    ratingsCount: number | null;
   } | null;
   voteCount: number;
 };
@@ -62,6 +67,11 @@ export function PollVoteForm({
     <div className="space-y-4">
       {options.map((option) => {
         const pct = totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0;
+        const listenHint = formatAudiobookHours(option.book?.pageCount);
+        const meta: string[] = [];
+        if (option.book?.pageCount) meta.push(`${option.book.pageCount} pages`);
+        if (listenHint) meta.push(listenHint);
+
         return (
           <Card
             key={option.id}
@@ -78,11 +88,11 @@ export function PollVoteForm({
                 <img
                   src={option.book.coverUrl}
                   alt=""
-                  className="h-24 w-16 rounded object-cover"
+                  className="h-32 w-20 shrink-0 rounded object-cover sm:h-36 sm:w-24"
                 />
               )}
-              <div className="flex-1">
-                <p className="font-semibold">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold leading-snug">
                   {option.book?.title ?? option.label}
                 </p>
                 {option.book && (
@@ -90,11 +100,32 @@ export function PollVoteForm({
                     {option.book.authors.join(", ")}
                   </p>
                 )}
+
+                {option.book && (option.book.averageRating != null || meta.length > 0) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {option.book.averageRating != null && (
+                      <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
+                        <Star className="h-3.5 w-3.5 fill-gold text-gold" aria-hidden />
+                        {option.book.averageRating.toFixed(1)}
+                        {option.book.ratingsCount != null && option.book.ratingsCount > 0 && (
+                          <span className="font-normal text-muted-foreground">
+                            ({option.book.ratingsCount.toLocaleString()})
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    {meta.map((item) => (
+                      <span key={item}>{item}</span>
+                    ))}
+                  </div>
+                )}
+
                 {option.book?.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {truncate(option.book.description, 160)}
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {truncate(option.book.description, 280)}
                   </p>
                 )}
+
                 {showResults && (
                   <div className="mt-3">
                     <div className="h-2 overflow-hidden rounded-full bg-secondary">

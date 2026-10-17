@@ -84,7 +84,7 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving…" : "Save as draft"}
+              {loading ? "Creating…" : "Create poll"}
             </Button>
             <Button variant="outline" asChild>
               <Link href={`/clubs/${clubSlug}/meetings`}>Cancel</Link>

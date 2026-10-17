@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
 import { searchBooksAction, upsertBookFromSearch } from "@/actions/polls";
-import type { BookSearchResult } from "@/lib/books";
+import { formatAudiobookHours, type BookSearchResult } from "@/lib/books";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -94,6 +94,21 @@ export function BookSearchPicker({
                 <div className="flex-1">
                   <p className="font-medium">{book.title}</p>
                   <p className="text-sm text-muted-foreground">{book.authors.join(", ")}</p>
+                  {(book.averageRating != null || book.pageCount) && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[
+                        book.averageRating != null
+                          ? `★ ${book.averageRating.toFixed(1)}${
+                              book.ratingsCount ? ` (${book.ratingsCount})` : ""
+                            }`
+                          : null,
+                        book.pageCount ? `${book.pageCount} pages` : null,
+                        formatAudiobookHours(book.pageCount),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                   {book.description && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {truncate(book.description, 120)}

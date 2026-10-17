@@ -55,7 +55,8 @@ export async function createBookPoll(
       clubId: club.id,
       type: "BOOK_SELECTION",
       title: parsed.data.title,
-      status: "DRAFT",
+      status: "OPEN",
+      publishedAt: new Date(),
       createdById: user.id,
       options: {
         create: parsed.data.bookIds.map((bookId, index) => ({
@@ -68,6 +69,15 @@ export async function createBookPoll(
 
   await Promise.all(parsed.data.bookIds.map((bookId) => addBookToClub(club.id, bookId)));
 
+  await createNotificationsForClubMembers(
+    club.id,
+    user.id,
+    "POLL_OPENED",
+    { message: `New poll: ${poll.title}`, clubSlug, pollTitle: poll.title },
+    poll.id
+  );
+
+  revalidatePath(`/clubs/${clubSlug}`);
   revalidatePath(`/clubs/${clubSlug}/polls`);
   return { success: true, data: { pollId: poll.id } };
 }
@@ -106,7 +116,8 @@ export async function createMeetingPoll(
       clubId: club.id,
       type: "MEETING",
       title: parsed.data.title,
-      status: "DRAFT",
+      status: "OPEN",
+      publishedAt: new Date(),
       createdById: user.id,
       options: {
         create: parsed.data.options.map((label, index) => ({
@@ -117,7 +128,17 @@ export async function createMeetingPoll(
     },
   });
 
+  await createNotificationsForClubMembers(
+    club.id,
+    user.id,
+    "POLL_OPENED",
+    { message: `New poll: ${poll.title}`, clubSlug, pollTitle: poll.title },
+    poll.id
+  );
+
+  revalidatePath(`/clubs/${clubSlug}`);
   revalidatePath(`/clubs/${clubSlug}/meetings`);
+  revalidatePath(`/clubs/${clubSlug}/polls`);
   return { success: true, data: { pollId: poll.id } };
 }
 
