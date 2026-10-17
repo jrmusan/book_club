@@ -3,13 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border/80 bg-card/90 text-card-foreground shadow-[0_1px_2px_rgba(42,36,28,0.04),0_8px_24px_rgba(42,36,28,0.06)] backdrop-blur-[2px]",
-        className
-      )}
-      {...props}
-    />
+    <div className={cn("cozy-panel rounded-2xl text-card-foreground", className)} {...props} />
   );
 }
 

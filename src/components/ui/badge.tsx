@@ -12,11 +12,9 @@ export function Badge({
       className={cn(
         "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
         variant === "default" && "border-transparent bg-primary text-primary-foreground",
-        variant === "secondary" &&
-          "border-transparent bg-accent text-accent-foreground",
-        variant === "outline" && "border-border bg-card/60 text-foreground",
-        variant === "success" &&
-          "border-transparent bg-primary/15 text-primary",
+        variant === "secondary" && "border-transparent bg-accent text-accent-foreground",
+        variant === "outline" && "border-border bg-muted text-foreground",
+        variant === "success" && "border-transparent bg-primary/20 text-primary",
         className
       )}
       {...props}

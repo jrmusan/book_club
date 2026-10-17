@@ -12,7 +12,7 @@ async function ClubChrome({ slug }: { slug: string }) {
     <>
       <Link
         href={`/clubs/${slug}`}
-        className="mb-3 inline-block text-sm font-medium text-muted-foreground hover:text-foreground"
+        className="font-display mb-3 inline-block text-base font-semibold tracking-tight text-foreground/90 drop-shadow-sm transition-colors hover:text-primary"
       >
         {club.name}
       </Link>

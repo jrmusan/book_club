@@ -22,7 +22,7 @@ export async function AppHeader() {
   const user = await requireUser();
 
   return (
-    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-card/75 backdrop-blur-md">
+    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[rgba(253,248,245,0.82)] backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link
           href="/dashboard"
@@ -61,7 +61,7 @@ export async function AppHeader() {
 
 export function AppHeaderFallback() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-card/75 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-[rgba(253,248,245,0.82)] backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <div className="font-display flex items-center gap-2 text-lg font-semibold">
           <BookOpen className="h-5 w-5 text-primary" />

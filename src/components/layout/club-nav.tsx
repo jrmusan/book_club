@@ -20,7 +20,7 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
   const visibleLinks = isOwner ? links : links.filter((l) => l.href !== "/settings/members");
 
   return (
-    <nav className="flex flex-wrap gap-1.5 border-b border-border/80 pb-4">
+    <nav className="cozy-panel flex flex-wrap gap-1.5 rounded-2xl p-2">
       {visibleLinks.map(({ href, label, icon: Icon, match }) => {
         const target = `${base}${href}`;
         const isActive =
@@ -33,10 +33,10 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
             key={href || "home"}
             href={target}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+              "inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition-all duration-200",
               isActive
-                ? "bg-primary/12 text-primary shadow-[inset_0_-2px_0_0_var(--primary)]"
-                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
             )}
           >
             <Icon className="h-4 w-4" />
@@ -47,7 +47,7 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
       {isOwner && (
         <Link
           href={`${base}/polls/new`}
-          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:brightness-110"
+          className="ml-auto inline-flex items-center gap-2 rounded-2xl bg-rose px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:brightness-105"
         >
           New poll
         </Link>
