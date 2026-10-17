@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +11,17 @@ import { getRecentUnreadNotifications } from "@/lib/notifications";
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [memberships, pendingInvites, unread] = await Promise.all([
+  const [memberships, pendingInvites] = await Promise.all([
     db.clubMembership.findMany({
       where: { userId: user.id, status: "ACTIVE" },
-      include: {
+      select: {
+        role: true,
         club: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
             _count: { select: { memberships: true, polls: true } },
           },
         },
@@ -28,9 +34,12 @@ export default async function DashboardPage() {
         acceptedAt: null,
         expiresAt: { gt: new Date() },
       },
-      include: { club: { select: { id: true, name: true, slug: true } } },
+      select: {
+        id: true,
+        token: true,
+        club: { select: { id: true, name: true, slug: true } },
+      },
     }),
-    getRecentUnreadNotifications(user.id, 5),
   ]);
 
   return (
@@ -69,28 +78,9 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {unread.length > 0 && (
-        <section className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent notifications</h2>
-            <Link href="/notifications" className="text-sm text-primary hover:underline">
-              View all
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {unread.map((n) => (
-              <Card key={n.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <p className="text-sm">
-                    {(n.payload as { message?: string }).message ?? n.type}
-                  </p>
-                  <Badge variant="secondary">New</Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={null}>
+        <RecentNotifications userId={user.id!} />
+      </Suspense>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold">Your clubs</h2>
@@ -129,5 +119,33 @@ export default async function DashboardPage() {
         )}
       </section>
     </main>
+  );
+}
+
+async function RecentNotifications({ userId }: { userId: string }) {
+  const unread = await getRecentUnreadNotifications(userId, 5);
+  if (unread.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Recent notifications</h2>
+        <Link href="/notifications" className="text-sm text-primary hover:underline">
+          View all
+        </Link>
+      </div>
+      <div className="space-y-2">
+        {unread.map((n) => (
+          <Card key={n.id}>
+            <CardContent className="flex items-center justify-between py-4">
+              <p className="text-sm">
+                {(n.payload as { message?: string }).message ?? n.type}
+              </p>
+              <Badge variant="secondary">New</Badge>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
   );
 }

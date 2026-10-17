@@ -12,25 +12,41 @@ export default async function PollDetailPage({
 }) {
   const { slug, pollId } = await params;
   const user = await requireUser();
-  const { club, membership } = await requireClubMemberBySlug(slug, user.id);
 
-  const poll = await db.poll.findFirst({
-    where: { id: pollId, clubId: club.id },
-    include: {
-      options: {
-        include: {
-          book: true,
-          _count: { select: { votes: true } },
+  const [{ membership }, poll] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
+    db.poll.findFirst({
+      where: { id: pollId, club: { slug } },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        status: true,
+        options: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            label: true,
+            book: {
+              select: {
+                id: true,
+                title: true,
+                authors: true,
+                coverUrl: true,
+                description: true,
+              },
+            },
+            _count: { select: { votes: true } },
+          },
         },
-        orderBy: { sortOrder: "asc" },
+        votes: {
+          where: { userId: user.id },
+          take: 1,
+          select: { optionId: true },
+        },
       },
-      votes: {
-        where: { userId: user.id },
-        take: 1,
-        select: { optionId: true },
-      },
-    },
-  });
+    }),
+  ]);
 
   if (!poll) {
     return <p>Poll not found</p>;

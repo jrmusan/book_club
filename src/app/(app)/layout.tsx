@@ -1,13 +1,10 @@
 import Image from "next/image";
-import { Suspense } from "react";
-import { AppHeader, AppHeaderFallback } from "@/components/layout/app-header";
+import { AppHeader } from "@/components/layout/app-header";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Suspense fallback={<AppHeaderFallback />}>
-        <AppHeader />
-      </Suspense>
+      <AppHeader />
       <div className="flex-1">{children}</div>
       <div className="pointer-events-none relative mt-8 select-none" aria-hidden>
         <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-background to-transparent" />

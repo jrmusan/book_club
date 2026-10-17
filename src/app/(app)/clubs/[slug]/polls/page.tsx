@@ -7,19 +7,21 @@ import { db } from "@/lib/db";
 export default async function PollsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club, membership } = await requireClubMemberBySlug(slug, user.id);
 
-  const polls = await db.poll.findMany({
-    where: { clubId: club.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      type: true,
-      status: true,
-      _count: { select: { votes: true, options: true } },
-    },
-  });
+  const [{ membership }, polls] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
+    db.poll.findMany({
+      where: { club: { slug } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        status: true,
+        _count: { select: { votes: true, options: true } },
+      },
+    }),
+  ]);
 
   return (
     <>

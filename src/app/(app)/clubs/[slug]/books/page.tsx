@@ -8,25 +8,36 @@ import { truncate } from "@/lib/utils";
 export default async function BooksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club } = await requireClubMemberBySlug(slug, user.id);
 
-  const clubBooks = await db.clubBook.findMany({
-    where: { clubId: club.id },
-    include: {
-      book: {
-        include: {
-          bookRatings: {
-            where: { clubId: club.id },
-            include: {
-              user: { select: { id: true, username: true, name: true } },
+  const [, clubBooks] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
+    db.clubBook.findMany({
+      where: { club: { slug } },
+      orderBy: { addedAt: "desc" },
+      select: {
+        book: {
+          select: {
+            id: true,
+            title: true,
+            authors: true,
+            coverUrl: true,
+            description: true,
+            bookRatings: {
+              where: { club: { slug } },
+              orderBy: { updatedAt: "desc" },
+              select: {
+                id: true,
+                rating: true,
+                review: true,
+                userId: true,
+                user: { select: { id: true, username: true, name: true } },
+              },
             },
-            orderBy: { updatedAt: "desc" },
           },
         },
       },
-    },
-    orderBy: { addedAt: "desc" },
-  });
+    }),
+  ]);
 
   return (
     <>

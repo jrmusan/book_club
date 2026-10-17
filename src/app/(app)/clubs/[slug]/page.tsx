@@ -8,35 +8,44 @@ import { db } from "@/lib/db";
 export default async function ClubPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club, membership } = await requireClubMemberBySlug(slug, user.id);
-  const isOwner = membership.role === "OWNER";
 
-  const [openPolls, upcomingMeetings, recentClosedPoll] = await Promise.all([
+  // Membership + page data in one round-trip wave (queries filter by slug).
+  const [{ club, membership }, openPolls, upcomingMeetings, recentClosedPoll] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
     db.poll.findMany({
-      where: { clubId: club.id, status: "OPEN" },
+      where: { club: { slug }, status: "OPEN" },
       orderBy: { publishedAt: "desc" },
       take: 3,
       select: { id: true, title: true, type: true },
     }),
     db.meeting.findMany({
-      where: { clubId: club.id, scheduledAt: { gte: new Date() } },
+      where: { club: { slug }, scheduledAt: { gte: new Date() } },
       orderBy: { scheduledAt: "asc" },
       take: 3,
       select: { id: true, title: true, scheduledAt: true, location: true },
     }),
     db.poll.findFirst({
-      where: { clubId: club.id, status: "CLOSED", type: "BOOK_SELECTION" },
+      where: { club: { slug }, status: "CLOSED", type: "BOOK_SELECTION" },
       orderBy: { closesAt: "desc" },
-      include: {
+      select: {
         options: {
-          include: {
-            book: true,
+          select: {
+            book: {
+              select: {
+                id: true,
+                title: true,
+                authors: true,
+                coverUrl: true,
+              },
+            },
             _count: { select: { votes: true } },
           },
         },
       },
     }),
   ]);
+
+  const isOwner = membership.role === "OWNER";
 
   const winner = recentClosedPoll
     ? [...recentClosedPoll.options]

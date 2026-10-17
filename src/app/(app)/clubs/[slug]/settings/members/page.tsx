@@ -8,16 +8,20 @@ import { db } from "@/lib/db";
 export default async function MembersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club } = await requireClubOwnerBySlug(slug, user.id);
 
-  const [members, pendingInvites] = await Promise.all([
+  const [{ club }, members, pendingInvites] = await Promise.all([
+    requireClubOwnerBySlug(slug, user.id),
     db.clubMembership.findMany({
-      where: { clubId: club.id, status: "ACTIVE" },
-      include: { user: { select: { id: true, username: true, email: true, name: true } } },
+      where: { club: { slug }, status: "ACTIVE" },
+      select: {
+        id: true,
+        role: true,
+        user: { select: { id: true, username: true, email: true, name: true } },
+      },
       orderBy: { createdAt: "asc" },
     }),
     db.clubInvite.findMany({
-      where: { clubId: club.id, acceptedAt: null, expiresAt: { gt: new Date() } },
+      where: { club: { slug }, acceptedAt: null, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: "desc" },
       select: { id: true, email: true, expiresAt: true, token: true },
     }),

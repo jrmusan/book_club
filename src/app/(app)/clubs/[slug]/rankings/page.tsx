@@ -4,32 +4,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 
+const bookSelect = {
+  id: true,
+  title: true,
+  authors: true,
+  coverUrl: true,
+} as const;
+
 export default async function RankingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club } = await requireClubMemberBySlug(slug, user.id);
 
-  const [ratedBooks, userRankings, allRankings, memberCount] = await Promise.all([
+  const [, ratedBooks, userRankings, allRankings, memberCount] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
     db.bookRating.findMany({
-      where: { clubId: club.id, userId: user.id },
-      include: { book: true },
+      where: { club: { slug }, userId: user.id },
       orderBy: { rating: "desc" },
+      select: {
+        rating: true,
+        book: { select: bookSelect },
+      },
     }),
     db.bookRanking.findMany({
-      where: { clubId: club.id, userId: user.id },
+      where: { club: { slug }, userId: user.id },
       orderBy: { rank: "asc" },
       select: { bookId: true },
     }),
     db.bookRanking.findMany({
-      where: { clubId: club.id },
-      include: {
-        book: true,
+      where: { club: { slug } },
+      orderBy: { rank: "asc" },
+      select: {
+        bookId: true,
+        rank: true,
+        userId: true,
+        book: { select: bookSelect },
         user: { select: { id: true, username: true, name: true } },
       },
-      orderBy: { rank: "asc" },
     }),
     db.clubMembership.count({
-      where: { clubId: club.id, status: "ACTIVE" },
+      where: { club: { slug }, status: "ACTIVE" },
     }),
   ]);
 

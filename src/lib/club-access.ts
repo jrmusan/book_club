@@ -54,8 +54,14 @@ export const requireClubMember = cache(async (clubId: string, userId: string) =>
 export const requireClubMemberBySlug = cache(async (slug: string, userId: string) => {
   const club = await db.club.findUnique({
     where: { slug },
-    include: {
-      owner: { select: { id: true, username: true, name: true } },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      ownerId: true,
+      createdAt: true,
+      updatedAt: true,
       memberships: {
         where: { userId, status: "ACTIVE" },
         take: 1,
@@ -72,17 +78,10 @@ export const requireClubMemberBySlug = cache(async (slug: string, userId: string
     throw new ForbiddenError("You are not a member of this club");
   }
 
+  const { memberships, ...clubFields } = club;
+  void memberships;
   return {
-    club: {
-      id: club.id,
-      name: club.name,
-      slug: club.slug,
-      description: club.description,
-      ownerId: club.ownerId,
-      createdAt: club.createdAt,
-      updatedAt: club.updatedAt,
-      owner: club.owner,
-    },
+    club: clubFields,
     membership,
   };
 });

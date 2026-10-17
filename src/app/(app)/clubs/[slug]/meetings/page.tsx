@@ -7,21 +7,23 @@ import { db } from "@/lib/db";
 export default async function MeetingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const user = await requireUser();
-  const { club, membership } = await requireClubMemberBySlug(slug, user.id);
+
+  const [{ membership }, meetings] = await Promise.all([
+    requireClubMemberBySlug(slug, user.id),
+    db.meeting.findMany({
+      where: { club: { slug } },
+      orderBy: { scheduledAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        scheduledAt: true,
+        location: true,
+        notes: true,
+      },
+    }),
+  ]);
+
   const isOwner = membership.role === "OWNER";
-
-  const meetings = await db.meeting.findMany({
-    where: { clubId: club.id },
-    orderBy: { scheduledAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      scheduledAt: true,
-      location: true,
-      notes: true,
-    },
-  });
-
   const now = new Date();
   const upcoming = meetings.filter((m) => m.scheduledAt >= now);
   const past = meetings.filter((m) => m.scheduledAt < now);

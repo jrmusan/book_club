@@ -2,25 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Bell, BookOpen, LogOut } from "lucide-react";
 import { signOut } from "@/auth";
-import { getUnreadNotificationCount } from "@/lib/notifications";
 import { requireUser } from "@/lib/club-access";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
-async function NotificationBadge({ userId }: { userId: string }) {
-  const unreadCount = await getUnreadNotificationCount(userId);
-  if (unreadCount <= 0) return null;
-
-  return (
-    <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center px-1">
-      {unreadCount}
-    </Badge>
-  );
-}
-
-export async function AppHeader() {
-  const user = await requireUser();
-
+/** Sync chrome so navigations aren't blocked on session/DB. */
+export function AppHeader() {
   return (
     <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[rgba(253,248,245,0.82)] backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
@@ -32,17 +18,14 @@ export async function AppHeader() {
           Book Club
         </Link>
         <div className="flex items-center gap-3">
-          <Link href="/notifications" className="relative">
+          <Link href="/notifications">
             <Button variant="ghost" size="icon" aria-label="Notifications">
               <Bell className="h-5 w-5" />
             </Button>
-            <Suspense fallback={null}>
-              <NotificationBadge userId={user.id!} />
-            </Suspense>
           </Link>
-          <span className="hidden text-sm text-muted-foreground sm:inline">
-            @{user.username}
-          </span>
+          <Suspense fallback={<div className="h-5 w-20 animate-pulse rounded bg-muted" />}>
+            <HeaderUser />
+          </Suspense>
           <form
             action={async () => {
               "use server";
@@ -59,16 +42,9 @@ export async function AppHeader() {
   );
 }
 
-export function AppHeaderFallback() {
+async function HeaderUser() {
+  const user = await requireUser();
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-[rgba(253,248,245,0.82)] backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <div className="font-display flex items-center gap-2 text-lg font-semibold">
-          <BookOpen className="h-5 w-5 text-primary" />
-          Book Club
-        </div>
-        <div className="h-8 w-24 animate-pulse rounded-md bg-muted" />
-      </div>
-    </header>
+    <span className="hidden text-sm text-muted-foreground sm:inline">@{user.username}</span>
   );
 }
