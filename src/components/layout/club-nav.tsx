@@ -20,21 +20,23 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
   const visibleLinks = isOwner ? links : links.filter((l) => l.href !== "/settings/members");
 
   return (
-    <nav className="flex flex-wrap gap-2 border-b border-border pb-4">
+    <nav className="flex flex-wrap gap-1.5 border-b border-border/80 pb-4">
       {visibleLinks.map(({ href, label, icon: Icon, match }) => {
         const target = `${base}${href}`;
         const isActive =
-          match === "exact" ? pathname === target : pathname === target || pathname.startsWith(`${target}/`);
+          match === "exact"
+            ? pathname === target
+            : pathname === target || pathname.startsWith(`${target}/`);
 
         return (
           <Link
             key={href || "home"}
             href={target}
             className={cn(
-              "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
               isActive
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                ? "bg-primary/12 text-primary shadow-[inset_0_-2px_0_0_var(--primary)]"
+                : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
             )}
           >
             <Icon className="h-4 w-4" />
@@ -45,7 +47,7 @@ export function ClubNav({ slug, isOwner }: { slug: string; isOwner: boolean }) {
       {isOwner && (
         <Link
           href={`${base}/polls/new`}
-          className="ml-auto inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:brightness-110"
         >
           New poll
         </Link>
