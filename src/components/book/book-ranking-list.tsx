@@ -36,8 +36,14 @@ function SortableBook({ book, rank }: { book: RankBook; rank: number }) {
 
   return (
     <Card ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
-      <CardContent className="flex items-center gap-3 py-4">
-        <button type="button" className="cursor-grab text-muted-foreground" {...attributes} {...listeners}>
+      <CardContent className="flex items-center gap-2 py-3 sm:gap-3 sm:py-4">
+        <button
+          type="button"
+          className="touch-manipulation cursor-grab p-1 text-muted-foreground"
+          aria-label={`Drag to reorder ${book.title}`}
+          {...attributes}
+          {...listeners}
+        >
           <GripVertical className="h-5 w-5" />
         </button>
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">

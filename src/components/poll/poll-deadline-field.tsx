@@ -32,13 +32,14 @@ export function PollDeadlineField({
     <div className="space-y-2">
       <Label htmlFor="closesAt">Voting deadline</Label>
       <p className="text-sm text-muted-foreground">Required — voting closes at this time.</p>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {PRESETS.map((preset) => (
           <Button
             key={preset.label}
             type="button"
             size="sm"
             variant="outline"
+            className="w-full px-1 text-xs sm:text-sm"
             onClick={() => onChange(addHours(preset.hours))}
           >
             {preset.label}
@@ -53,6 +54,7 @@ export function PollDeadlineField({
         min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        className="min-w-0 max-w-full"
       />
     </div>
   );

@@ -26,7 +26,7 @@ export default async function PollsPage({ params }: { params: Promise<{ slug: st
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-bold">Polls</h1>
+      <h1 className="mb-5 text-2xl font-bold sm:mb-6 sm:text-3xl">Polls</h1>
 
       <div className="space-y-4">
         {polls.length === 0 ? (

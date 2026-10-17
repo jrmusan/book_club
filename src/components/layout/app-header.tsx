@@ -10,16 +10,16 @@ import { Badge } from "@/components/ui/badge";
 /** Sync chrome so navigations aren't blocked on session/DB. */
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[rgba(253,248,245,0.82)] backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[rgba(253,248,245,0.92)] pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:h-16">
         <Link
           href="/dashboard"
-          className="font-display flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+          className="font-display flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight text-foreground transition-colors hover:text-primary sm:text-lg"
         >
-          <BookOpen className="h-5 w-5 text-primary" strokeWidth={2.25} />
-          Book Club
+          <BookOpen className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.25} />
+          <span className="truncate">Book Club</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <Link href="/notifications" className="relative" aria-label="Notifications">
             <Button variant="ghost" size="icon" aria-label="Notifications">
               <Bell className="h-5 w-5" />

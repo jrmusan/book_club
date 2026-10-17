@@ -36,6 +36,7 @@ export default async function PollDetailPage({
                 id: true,
                 externalSource: true,
                 externalId: true,
+                isbn: true,
                 title: true,
                 authors: true,
                 coverUrl: true,
@@ -134,11 +135,14 @@ export default async function PollDetailPage({
   const isOpen = status === "OPEN";
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{poll.title}</h1>
-          <p className="text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
+    <div className="mx-auto max-w-2xl pb-20 sm:pb-0">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-bold leading-tight sm:text-2xl">{poll.title}</h1>
+            <Badge className="shrink-0">{status}</Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{poll.type.replace("_", " ")}</p>
           {poll.closesAt && (
             <p className="mt-2 text-sm text-muted-foreground">
               {isOpen ? "Voting closes" : "Closed"}{" "}
@@ -149,7 +153,6 @@ export default async function PollDetailPage({
             </p>
           )}
         </div>
-        <Badge>{status}</Badge>
       </div>
 
       {canManage && (

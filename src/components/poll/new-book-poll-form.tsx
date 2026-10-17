@@ -57,12 +57,12 @@ export function NewBookPollForm({ clubSlug }: { clubSlug: string }) {
           <PollDeadlineField value={closesAt} onChange={setClosesAt} />
           <BookSearchPicker selected={selected} onChange={setSelected} />
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create poll"}
-            </Button>
-            <Button variant="outline" asChild>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <Button variant="outline" className="w-full sm:w-auto" asChild>
               <Link href={`/clubs/${clubSlug}/polls`}>Cancel</Link>
+            </Button>
+            <Button type="submit" className="w-full sm:w-auto" disabled={loading}>
+              {loading ? "Creating…" : "Create poll"}
             </Button>
           </div>
         </form>

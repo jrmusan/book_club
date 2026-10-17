@@ -60,7 +60,7 @@ export default async function ClubPage({ params }: { params: Promise<{ slug: str
     <>
       <div className="mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">{club.name}</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">{club.name}</h1>
           {isOwner && <Badge>Owner</Badge>}
         </div>
         {club.description && (

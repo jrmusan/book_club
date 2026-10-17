@@ -61,11 +61,15 @@
 
 html {
   color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   background-color: var(--background);
@@ -73,7 +77,26 @@ body {
     radial-gradient(ellipse 90% 60% at 10% 0%, rgba(184, 169, 196, 0.18), transparent 55%),
     radial-gradient(ellipse 80% 50% at 90% 10%, rgba(201, 137, 122, 0.14), transparent 50%),
     radial-gradient(ellipse 70% 40% at 50% 100%, rgba(125, 155, 122, 0.12), transparent 55%);
-  background-attachment: fixed;
+  /* fixed backgrounds jank on mobile Safari */
+  background-attachment: scroll;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 768px) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+/* Hide scrollbars on intentional horizontal nav strips */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* Soft sparkles (stars / moons) */

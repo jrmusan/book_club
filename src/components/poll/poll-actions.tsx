@@ -28,13 +28,15 @@ export function PollActions({
   }
 
   return (
-    <div className="flex gap-2 rounded-lg border border-border bg-accent/50 p-4">
+    <div className="flex flex-col gap-2 rounded-2xl border border-border bg-accent/50 p-3 sm:flex-row sm:p-4">
       {status === "DRAFT" && (
-        <Button onClick={handlePublish}>Publish poll to club</Button>
+        <Button className="w-full sm:w-auto" onClick={handlePublish}>
+          Publish poll to club
+        </Button>
       )}
       {status === "OPEN" && (
-        <Button variant="secondary" onClick={handleClose}>
-          Close poll
+        <Button className="w-full sm:w-auto" variant="secondary" onClick={handleClose}>
+          Close poll early
         </Button>
       )}
       {status === "CLOSED" && pollType === "BOOK_SELECTION" && (

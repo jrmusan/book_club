@@ -41,7 +41,7 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-bold">Books</h1>
+      <h1 className="mb-5 text-2xl font-bold sm:mb-6 sm:text-3xl">Books</h1>
 
       <div className="space-y-6">
         {clubBooks.length === 0 ? (
@@ -65,17 +65,21 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
 
             return (
               <Card key={book.id}>
-                <CardHeader>
-                  <div className="flex gap-4">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex gap-3 sm:gap-4">
                     {book.coverUrl && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={book.coverUrl} alt="" className="h-28 w-20 rounded object-cover" />
+                      <img
+                        src={book.coverUrl}
+                        alt=""
+                        className="h-24 w-16 shrink-0 rounded object-cover sm:h-28 sm:w-20"
+                      />
                     )}
-                    <div>
-                      <CardTitle>{book.title}</CardTitle>
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg sm:text-2xl">{book.title}</CardTitle>
                       <p className="text-sm text-muted-foreground">{book.authors.join(", ")}</p>
                       {book.description && (
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-2 line-clamp-3 text-sm text-muted-foreground sm:line-clamp-none">
                           {truncate(book.description, 200)}
                         </p>
                       )}

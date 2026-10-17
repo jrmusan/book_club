@@ -43,13 +43,15 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Your book clubs and recent activity</p>
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Your book clubs and recent activity
+          </p>
         </div>
-        <Button asChild>
+        <Button className="w-full shrink-0 sm:w-auto" asChild>
           <Link href="/clubs/new">
             <Plus className="mr-2 h-4 w-4" />
             New club

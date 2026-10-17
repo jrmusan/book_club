@@ -119,7 +119,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-bold">Rankings</h1>
+      <h1 className="mb-5 text-2xl font-bold sm:mb-6 sm:text-3xl">Rankings</h1>
 
       <div className="grid gap-8 lg:grid-cols-2">
         <section>

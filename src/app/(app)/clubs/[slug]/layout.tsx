@@ -44,11 +44,11 @@ export default async function ClubLayout({
   const { slug } = await params;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:py-8">
       <Suspense fallback={<ClubChromeFallback />}>
         <ClubChrome slug={slug} />
       </Suspense>
-      <div className="mt-8">
+      <div className="mt-5 sm:mt-8">
         <Suspense fallback={<ClubPageSkeleton />}>{children}</Suspense>
       </div>
     </div>

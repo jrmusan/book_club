@@ -6,18 +6,21 @@ import { Button } from "@/components/ui/button";
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      <header className="animate-soft-in absolute inset-x-0 top-0 z-20">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="font-display flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <BookOpen className="h-6 w-6 text-primary" strokeWidth={2.25} />
-            Book Club
+      <header className="animate-soft-in absolute inset-x-0 top-0 z-20 pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:h-16">
+          <div className="font-display flex min-w-0 items-center gap-2 text-base font-semibold tracking-tight sm:text-lg">
+            <BookOpen className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" strokeWidth={2.25} />
+            <span className="truncate">Book Club</span>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" asChild>
+          <div className="flex shrink-0 gap-1.5 sm:gap-2">
+            <Button variant="ghost" size="sm" className="px-2.5 sm:px-3" asChild>
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button asChild>
-              <Link href="/register">Get started</Link>
+            <Button size="sm" className="px-2.5 sm:px-3" asChild>
+              <Link href="/register">
+                <span className="sm:hidden">Join</span>
+                <span className="hidden sm:inline">Get started</span>
+              </Link>
             </Button>
           </div>
         </div>
@@ -25,22 +28,22 @@ export default function HomePage() {
 
       <main>
         <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
-          <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 pb-6 pt-24 text-center">
-            <p className="font-display animate-fade-up text-4xl font-semibold tracking-tight text-primary sm:text-5xl md:text-6xl">
+          <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 pb-4 pt-20 text-center sm:pb-6 sm:pt-24">
+            <p className="font-display animate-fade-up text-3xl font-semibold tracking-tight text-primary sm:text-5xl md:text-6xl">
               Book Club
             </p>
-            <h1 className="font-display animate-fade-up-delay-1 mt-4 text-3xl font-medium leading-tight tracking-tight text-foreground sm:text-4xl">
+            <h1 className="font-display animate-fade-up-delay-1 mt-3 text-2xl font-medium leading-tight tracking-tight text-foreground sm:mt-4 sm:text-4xl">
               Gather around the next great read
             </h1>
-            <p className="animate-fade-up-delay-2 mx-auto mt-4 max-w-lg text-lg leading-relaxed text-muted-foreground">
+            <p className="animate-fade-up-delay-2 mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground sm:mt-4 sm:text-lg">
               Vote on books, plan cozy meetups, and keep every club&apos;s favorites on one soft
               little shelf.
             </p>
-            <div className="animate-fade-up-delay-3 mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button size="lg" asChild>
+            <div className="animate-fade-up-delay-3 mt-6 flex w-full flex-col items-stretch gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
+              <Button size="lg" className="w-full sm:w-auto" asChild>
                 <Link href="/register">Start a club</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
                 <Link href="/login">Sign in</Link>
               </Button>
             </div>
@@ -60,8 +63,8 @@ export default function HomePage() {
         </section>
 
         <section className="relative z-10 px-4 pb-16 pt-8">
-          <div className="cozy-panel mx-auto max-w-3xl rounded-3xl px-6 py-12 sm:px-10">
-            <h2 className="font-display text-center text-3xl font-semibold tracking-tight">
+          <div className="cozy-panel mx-auto max-w-3xl rounded-3xl px-4 py-10 sm:px-10 sm:py-12">
+            <h2 className="font-display text-center text-2xl font-semibold tracking-tight sm:text-3xl">
               Everything your circle needs
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-center text-muted-foreground">
