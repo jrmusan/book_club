@@ -8,6 +8,7 @@ export default defineConfig({
     if (branch.isDefault) {
       // Default branch: no overrides, uses project defaults
       return {};
+      
     }
     if (!branch.exists) {
       // New non-default branches: auto-expire
