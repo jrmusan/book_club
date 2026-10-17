@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           alt=""
           width={1600}
           height={400}
-          className="mx-auto h-auto max-h-28 w-full max-w-4xl object-contain object-bottom opacity-60 sm:max-h-none sm:opacity-70"
+          className="bookshelf-deco mx-auto h-auto max-h-28 w-full max-w-4xl object-contain object-bottom sm:max-h-none"
         />
       </div>
     </div>

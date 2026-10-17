@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 /** Sync chrome so navigations aren't blocked on session/DB. */
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[rgba(253,248,245,0.92)] pt-[env(safe-area-inset-top)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 animate-soft-in border-b border-border/70 bg-[var(--header-bg)] pt-[env(safe-area-inset-top)] backdrop-blur-md transition-colors duration-300">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:h-16">
         <Link
           href="/dashboard"

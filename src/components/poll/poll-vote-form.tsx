@@ -180,7 +180,7 @@ export function PollVoteForm({
       })}
 
       {isOpen && !userVoteOptionId && (
-        <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/70 bg-[rgba(253,248,245,0.92)] px-4 py-3 backdrop-blur-md sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/70 bg-[var(--header-bg)] px-4 py-3 pr-16 backdrop-blur-md transition-colors duration-300 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pr-0 sm:py-0 sm:backdrop-blur-none">
           {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
           <Button
             className="w-full sm:w-auto"
