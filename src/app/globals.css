@@ -90,7 +90,7 @@
   --color-rose: var(--rose);
   --color-lavender: var(--lavender);
   --color-gold: var(--gold);
-  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -118,7 +118,7 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   background-color: var(--background);
   background-image:
     radial-gradient(ellipse 90% 60% at 10% 0%, var(--wash-lavender), transparent 55%),
@@ -173,8 +173,9 @@ h1,
 h2,
 h3,
 .font-display {
-  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-family: var(--font-fraunces), Georgia, "Times New Roman", serif;
   font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50, "WONK" 1;
 }
 
 @keyframes fade-up {

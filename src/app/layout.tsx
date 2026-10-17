@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Fraunces, Nunito } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import "./globals.css";
@@ -7,10 +7,11 @@ import "./globals.css";
 const display = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
+  axes: ["SOFT", "WONK"],
 });
 
-const sans = Source_Sans_3({
-  variable: "--font-source-sans",
+const sans = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
 });
 
