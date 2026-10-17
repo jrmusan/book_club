@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import { BookOpen, Calendar, Star, Users, Vote } from "lucide-react";
+import { CozyWindow } from "@/components/landing/cozy-window";
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
@@ -28,37 +28,31 @@ export default function HomePage() {
 
       <main>
         <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
-          <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 pb-4 pt-20 text-center sm:pb-6 sm:pt-24">
-            <p className="font-display animate-fade-up text-3xl font-semibold tracking-tight text-primary sm:text-5xl md:text-6xl">
-              Book Club
-            </p>
-            <h1 className="font-display animate-fade-up-delay-1 mt-3 text-2xl font-medium leading-tight tracking-tight text-foreground sm:mt-4 sm:text-4xl">
-              Gather around the next great read
-            </h1>
-            <p className="animate-fade-up-delay-2 mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground sm:mt-4 sm:text-lg">
-              Vote on books, plan cozy meetups, and keep every club&apos;s favorites on one soft
-              little shelf.
-            </p>
-            <div className="animate-fade-up-delay-3 mt-6 flex w-full flex-col items-stretch gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3">
-              <Button size="lg" className="w-full sm:w-auto" asChild>
-                <Link href="/register">Start a club</Link>
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-                <Link href="/login">Sign in</Link>
-              </Button>
+          <div className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-6 px-4 pb-10 pt-20 sm:pt-24 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
+            <div className="text-center lg:text-left">
+              <p className="font-display animate-fade-up text-3xl font-semibold tracking-tight text-primary sm:text-5xl md:text-6xl">
+                Book Club
+              </p>
+              <h1 className="font-display animate-fade-up-delay-1 mt-3 text-2xl font-medium leading-tight tracking-tight text-foreground sm:mt-4 sm:text-4xl">
+                Gather around the next great read
+              </h1>
+              <p className="animate-fade-up-delay-2 mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted-foreground sm:mt-4 sm:text-lg lg:mx-0">
+                Vote on books, plan cozy meetups, and keep every club&apos;s favorites on one soft
+                little shelf.
+              </p>
+              <div className="animate-fade-up-delay-3 mt-6 flex w-full flex-col items-stretch gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 lg:justify-start">
+                <Button size="lg" className="w-full sm:w-auto" asChild>
+                  <Link href="/register">Start a club</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
+                  <Link href="/login">Sign in</Link>
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Full-bleed shelf visual for the first viewport */}
-          <div className="relative mt-auto w-full">
-            <Image
-              src="/cozy-bookshelf.jpg"
-              alt=""
-              width={1600}
-              height={520}
-              priority
-              className="mx-auto h-auto w-full max-w-5xl object-contain object-bottom px-2 sm:px-6"
-            />
+            <div className="animate-fade-up-delay-2">
+              <CozyWindow />
+            </div>
           </div>
         </section>
 
