@@ -1,3 +1,9 @@
+import {
+  signInEmailHtml,
+  signInEmailSubject,
+  signInEmailText,
+} from "@/lib/email/sign-in-email";
+
 /** How long a sign-in link stays valid. Auth.js stores only a hash of the token. */
 export const MAGIC_LINK_MAX_AGE_SECONDS = 60 * 60;
 
@@ -8,14 +14,6 @@ function expiryLabel(seconds: number) {
   }
   const minutes = Math.max(1, Math.round(seconds / 60));
   return minutes === 1 ? "1 minute" : `${minutes} minutes`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 /**
@@ -39,25 +37,7 @@ export async function sendResendSignInEmail(params: {
 
   const host = new URL(params.url).host;
   const expires = expiryLabel(params.expiresInSeconds ?? MAGIC_LINK_MAX_AGE_SECONDS);
-  const safeUrl = escapeHtml(params.url);
-  const safeHost = escapeHtml(host);
-  const subject = `Sign in to ${host}`;
-  const text = [
-    `Sign in to ${host}`,
-    ``,
-    params.url,
-    ``,
-    `This link expires in ${expires} and works once.`,
-    `If you did not ask to sign in, you can ignore this email.`,
-  ].join("\n");
-  const html = `<!DOCTYPE html>
-<html>
-  <body style="font-family: Georgia, serif; color: #1c1917; line-height: 1.5;">
-    <p>Sign in to <strong>${safeHost}</strong></p>
-    <p><a href="${safeUrl}">Open the sign-in link</a></p>
-    <p style="color: #57534e;">This link expires in ${escapeHtml(expires)} and works once. If you did not ask to sign in, you can ignore this email.</p>
-  </body>
-</html>`;
+  const content = { signInUrl: params.url, host, expiresLabel: expires };
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -68,9 +48,9 @@ export async function sendResendSignInEmail(params: {
     body: JSON.stringify({
       from,
       to: [params.identifier],
-      subject,
-      html,
-      text,
+      subject: signInEmailSubject(host),
+      html: signInEmailHtml(content),
+      text: signInEmailText(content),
     }),
   });
 
