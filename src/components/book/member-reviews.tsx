@@ -19,7 +19,6 @@ export type MemberReview = {
   review: string | null;
   userId: string;
   displayName: string;
-  username: string;
 };
 
 export function MemberReviews({
@@ -56,14 +55,7 @@ export function MemberReviews({
               className="rounded-lg border border-border px-3 py-2.5"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">
-                  {isYou ? "You" : r.displayName}
-                  {!isYou && (
-                    <span className="ml-1.5 font-normal text-muted-foreground">
-                      @{r.username}
-                    </span>
-                  )}
-                </p>
+                <p className="text-sm font-medium">{isYou ? "You" : r.displayName}</p>
                 <StarRating rating={r.rating} />
               </div>
               {r.review && (

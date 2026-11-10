@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { personName } from "@/lib/utils";
 
 export const bookNoteSelect = {
   id: true,
@@ -6,7 +7,7 @@ export const bookNoteSelect = {
   body: true,
   userId: true,
   updatedAt: true,
-  user: { select: { id: true, username: true, name: true } },
+  user: { select: { id: true, name: true, email: true } },
 } as const;
 
 export type BookNoteRow = {
@@ -15,14 +16,13 @@ export type BookNoteRow = {
   body: string;
   userId: string;
   updatedAt: Date;
-  user: { id: string; username: string; name: string | null };
+  user: { id: string; name: string | null; email: string };
 };
 
 export type SharedBookNote = {
   id: string;
   body: string;
   displayName: string;
-  username: string;
   updatedAtLabel: string;
 };
 
@@ -49,8 +49,7 @@ export function notesForBook(notes: BookNoteRow[], bookId: string, currentUserId
     .map((note) => ({
       id: note.id,
       body: note.body,
-      displayName: note.user.name ?? note.user.username,
-      username: note.user.username,
+      displayName: personName(note.user),
       updatedAtLabel: formatNoteDate(note.updatedAt),
     }));
 

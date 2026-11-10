@@ -18,7 +18,7 @@ export default function HomePage() {
               <Link href="/login">Sign in</Link>
             </Button>
             <Button size="sm" className="px-2.5 sm:px-3" asChild>
-              <Link href="/register">
+              <Link href="/login">
                 <span className="sm:hidden">Join</span>
                 <span className="hidden sm:inline">Get started</span>
               </Link>
@@ -44,7 +44,7 @@ export default function HomePage() {
               </p>
               <div className="animate-fade-up-delay-3 mt-6 flex w-full flex-col items-stretch gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 lg:justify-start">
                 <Button size="lg" className="w-full sm:w-auto" asChild>
-                  <Link href="/register">Start a club</Link>
+                  <Link href="/login">Start a club</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
                   <Link href="/login">Sign in</Link>

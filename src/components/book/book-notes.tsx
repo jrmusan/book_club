@@ -96,7 +96,6 @@ export function BookNotes({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm font-medium">
                     {note.displayName}
-                    <span className="ml-1.5 font-normal text-muted-foreground">@{note.username}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">{note.updatedAtLabel}</p>
                 </div>

@@ -6,7 +6,7 @@ import { listClubBookNotes, notesForBook } from "@/lib/book-notes";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 import { listClosedBookPollWinners } from "@/lib/polls";
-import { truncate } from "@/lib/utils";
+import { personName, truncate } from "@/lib/utils";
 
 export default async function BooksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -35,7 +35,7 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
                 rating: true,
                 review: true,
                 userId: true,
-                user: { select: { id: true, username: true, name: true } },
+                user: { select: { id: true, name: true, email: true } },
               },
             },
           },
@@ -66,8 +66,7 @@ export default async function BooksPage({ params }: { params: Promise<{ slug: st
               rating: r.rating,
               review: r.review,
               userId: r.user.id,
-              displayName: r.user.name ?? r.user.username,
-              username: r.user.username,
+              displayName: personName(r.user),
             }));
 
             return (

@@ -6,7 +6,7 @@ A production-ready web app for organizing book clubs — vote on books, plan mee
 
 - **Next.js 15** (App Router, React Server Components)
 - **React 19** + TypeScript 5
-- **Auth.js v5** (Credentials: email/username/password)
+- **Auth.js v5** with Resend magic-link email (no passwords or usernames)
 - **Prisma 5** + PostgreSQL
 - **Zod** validation
 - **Turbopack** for local dev
@@ -43,12 +43,9 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo accounts (after seeding)
+### Demo data (after seeding)
 
-| Email | Password | Role |
-|-------|----------|------|
-| alice@example.com | password123 | Club owner |
-| bob@example.com | password123 | Member |
+Seed creates `alice@example.com` (club owner) and `bob@example.com` (member). Sign in from `/login`. Resend emails a one-time link. See [SETUP.md](SETUP.md).
 
 ## Deploy to Vercel
 
@@ -67,7 +64,12 @@ Open [http://localhost:3000](http://localhost:3000).
 | `AUTH_TRUST_HOST` | `true` |
 | `AUTH_URL` | `https://your-app.vercel.app` (or your custom domain) |
 | `NEXTAUTH_URL` | same as `AUTH_URL` |
+| `AUTH_SESSION_MAX_AGE` | `2592000` (30 days, optional) |
+| `RESEND_API_KEY` | Resend sending key (`re_...`) |
+| `RESEND_FROM_EMAIL` | Sender on a verified domain, e.g. `Book Club <login@yourdomain.com>` |
 | `GOOGLE_BOOKS_API_KEY` | optional |
+
+Domain verification, DNS, and the sign-in callback are in [SETUP.md](SETUP.md).
 
 5. Deploy. The build script runs `prisma migrate deploy` then `next build`.
 6. Optionally seed: `npm run db:seed`
@@ -75,7 +77,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Notes
 
 - Prefer Neon’s **pooled** URL for app traffic. Migrations use `DATABASE_URL_UNPOOLED`.
-- Keep Auth.js (do not replace with Neon Auth unless you ask to migrate login).
+- Login is Auth.js plus Resend magic links. Do not switch it to Neon Auth unless you mean to replace this flow.
 - `Dockerfile` / `render.yaml` remain for optional Docker/Render; Vercel ignores them.
 
 ## Features
@@ -93,7 +95,7 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
   app/           # Next.js App Router pages
   actions/       # Server Actions
-  auth.ts        # Auth.js (Credentials + Prisma)
+  auth.ts        # Auth.js (Resend magic link + Prisma adapter)
   auth.config.ts # Edge-safe middleware config
   components/    # UI components
   lib/           # DB, books API, validations, access control

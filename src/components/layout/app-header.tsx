@@ -58,5 +58,5 @@ async function HeaderAccount() {
     await signOut({ redirectTo: "/" });
   }
 
-  return <AccountMenu username={user.username} name={user.name} signOutAction={signOutAction} />;
+  return <AccountMenu name={user.name} email={user.email} signOutAction={signOutAction} />;
 }

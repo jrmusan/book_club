@@ -2,62 +2,35 @@
 
 import { signIn } from "@/auth";
 import { db } from "@/lib/db";
-import { hashPassword } from "@/lib/password";
+import { safeCallbackUrl } from "@/lib/safe-callback-url";
 import { slugify } from "@/lib/utils";
-import { registerSchema } from "@/lib/validations/auth";
+import { signInEmailSchema } from "@/lib/validations/auth";
 import { AuthError } from "next-auth";
 
 export type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string };
 
-export async function registerUser(formData: FormData): Promise<ActionResult<{ userId: string }>> {
-  const parsed = registerSchema.safeParse({
+export async function requestEmailSignIn(formData: FormData): Promise<ActionResult> {
+  const parsed = signInEmailSchema.safeParse({
     email: formData.get("email"),
-    username: formData.get("username"),
-    password: formData.get("password"),
-    name: formData.get("name") || undefined,
   });
-
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid email" };
   }
 
-  const email = parsed.data.email.toLowerCase();
-  const existing = await db.user.findFirst({
-    where: { OR: [{ email }, { username: parsed.data.username }] },
-  });
-  if (existing) {
-    return { success: false, error: "Email or username already in use" };
-  }
+  const callbackField = formData.get("callbackUrl");
+  const callbackUrl = safeCallbackUrl(typeof callbackField === "string" ? callbackField : null);
 
-  const passwordHash = await hashPassword(parsed.data.password);
-  const user = await db.user.create({
-    data: {
-      email,
-      username: parsed.data.username,
-      passwordHash,
-      name: parsed.data.name,
-    },
-  });
-
-  return { success: true, data: { userId: user.id } };
-}
-
-export async function loginUser(formData: FormData): Promise<ActionResult> {
   try {
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirect: false,
+    await signIn("resend", {
+      email: parsed.data.email.toLowerCase(),
+      redirectTo: callbackUrl,
     });
     return { success: true };
   } catch (error) {
-    if (error instanceof AuthError && error.type === "CredentialsSignin") {
-      return { success: false, error: "Invalid email or password" };
-    }
     if (error instanceof AuthError) {
-      return { success: false, error: "Invalid email or password" };
+      return { success: false, error: "Could not send the sign-in email. Try again in a moment." };
     }
     throw error;
   }

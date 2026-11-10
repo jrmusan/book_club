@@ -5,13 +5,9 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 FROM base AS deps
-# Native bcrypt needs a toolchain on Alpine when prebuilds aren't used.
-RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
 # Skip lifecycle scripts so postinstall (prisma generate) doesn't run before the schema is present.
-# Then rebuild bcrypt so its native binding install script still runs.
-RUN npm install --ignore-scripts \
-  && npm rebuild bcrypt
+RUN npm install --ignore-scripts
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
@@ -32,10 +28,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-# Ensure bcrypt native addon is present in the standalone image.
-COPY --from=builder /app/node_modules/bcrypt ./node_modules/bcrypt
-COPY --from=builder /app/node_modules/node-addon-api ./node_modules/node-addon-api
-COPY --from=builder /app/node_modules/node-gyp-build ./node_modules/node-gyp-build
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh && chown nextjs:nodejs docker-entrypoint.sh
 
