@@ -30,7 +30,7 @@ export const getClubBySlug = cache(async (slug: string) => {
   return db.club.findUnique({
     where: { slug },
     include: {
-      owner: { select: { id: true, username: true, name: true } },
+      owner: { select: { id: true, name: true, email: true } },
     },
   });
 });

@@ -1,9 +1,26 @@
 import type { NextAuthConfig } from "next-auth";
 
+/** Cookie lifetime. Invalid or missing AUTH_SESSION_MAX_AGE falls back to 30 days. */
+export function sessionMaxAgeSeconds() {
+  const raw = process.env.AUTH_SESSION_MAX_AGE;
+  if (!raw) return 60 * 60 * 24 * 30;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 60) return 60 * 60 * 24 * 30;
+  return Math.floor(parsed);
+}
+
 export const authConfig = {
   trustHost: true,
   pages: {
     signIn: "/login",
+    verifyRequest: "/login/check-email",
+    error: "/login",
+  },
+  // JWT cookie: httpOnly, SameSite=Lax, Path=/.
+  // Secure (and the __Secure- name prefix) when AUTH_URL is https.
+  session: {
+    strategy: "jwt",
+    maxAge: sessionMaxAgeSeconds(),
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -18,9 +35,7 @@ export const authConfig = {
         return false;
       }
 
-      const isAuthPage =
-        nextUrl.pathname === "/login" || nextUrl.pathname === "/register";
-      if (isAuthPage && isLoggedIn) {
+      if (nextUrl.pathname === "/login" && isLoggedIn) {
         return Response.redirect(new URL("/dashboard", nextUrl));
       }
 
@@ -29,18 +44,15 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.username = user.username;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string;
+        session.user.id = (token.id as string) ?? token.sub ?? "";
       }
       return session;
     },
   },
   providers: [],
-  session: { strategy: "jwt" },
 } satisfies NextAuthConfig;

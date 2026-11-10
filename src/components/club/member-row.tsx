@@ -12,7 +12,6 @@ export function MemberRow({
   clubSlug,
   userId,
   displayName,
-  username,
   email,
   role,
   canRemove,
@@ -20,7 +19,6 @@ export function MemberRow({
   clubSlug: string;
   userId: string;
   displayName: string;
-  username: string;
   email: string;
   role: "OWNER" | "MEMBER";
   canRemove: boolean;
@@ -30,7 +28,7 @@ export function MemberRow({
   const [pending, startTransition] = useTransition();
 
   function onRemove() {
-    if (!window.confirm(`Remove ${displayName} (@${username}) from the club?`)) return;
+    if (!window.confirm(`Remove ${displayName} from the club?`)) return;
     setError(null);
     startTransition(async () => {
       const result = await removeMember(clubSlug, userId);
@@ -47,9 +45,9 @@ export function MemberRow({
       <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
         <div className="min-w-0">
           <CardTitle className="text-base">{displayName}</CardTitle>
-          <CardContent className="p-0 text-sm text-muted-foreground">
-            @{username} · {email}
-          </CardContent>
+          {email !== displayName && (
+            <CardContent className="p-0 text-sm text-muted-foreground">{email}</CardContent>
+          )}
           {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-2">

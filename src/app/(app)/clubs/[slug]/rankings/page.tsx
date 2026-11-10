@@ -3,6 +3,7 @@ import { MemberRankings } from "@/components/book/member-rankings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { personName } from "@/lib/utils";
 
 const bookSelect = {
   id: true,
@@ -38,7 +39,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
         rank: true,
         userId: true,
         book: { select: bookSelect },
-        user: { select: { id: true, username: true, name: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     }),
     db.clubMembership.count({
@@ -80,7 +81,6 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
     {
       userId: string;
       displayName: string;
-      username: string;
       books: {
         id: string;
         title: string;
@@ -105,8 +105,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ slug:
     } else {
       rankingsByUser.set(ranking.userId, {
         userId: ranking.user.id,
-        displayName: ranking.user.name ?? ranking.user.username,
-        username: ranking.user.username,
+        displayName: personName(ranking.user),
         books: [entry],
       });
     }

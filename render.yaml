@@ -37,5 +37,12 @@ services:
           type: web
           name: book-club-web
           envVarKey: RENDER_EXTERNAL_URL
+      - key: AUTH_SESSION_MAX_AGE
+        value: "2592000"
+      # Set in the Render dashboard. See SETUP.md.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
       - key: GOOGLE_BOOKS_API_KEY
         sync: false

@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Standalone is for Docker/Render. Omit on Vercel so the platform bundler owns the output.
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
-  serverExternalPackages: ["bcrypt"],
+  async redirects() {
+    return [{ source: "/register", destination: "/login", permanent: false }];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "books.google.com" },

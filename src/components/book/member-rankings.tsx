@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 export type MemberRankingList = {
   userId: string;
   displayName: string;
-  username: string;
   books: {
     id: string;
     title: string;
@@ -34,12 +33,7 @@ export function MemberRankings({
     <div className="space-y-6">
       {others.map((member) => (
         <div key={member.userId}>
-          <h3 className="mb-3 text-base font-semibold">
-            {member.displayName}
-            <span className="ml-1.5 font-normal text-muted-foreground">
-              @{member.username}
-            </span>
-          </h3>
+          <h3 className="mb-3 text-base font-semibold">{member.displayName}</h3>
           <ol className="space-y-2">
             {member.books.map((book) => (
               <li key={book.id}>

@@ -19,16 +19,13 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-bold">You&apos;re invited</h1>
           <p className="mt-2 text-muted-foreground">
-            Sign in with the email this invite was sent to, or create an account with that email,
-            then accept the invite.
+            Sign in with the email address this invite was sent to. Opening the link creates your
+            account if you don&apos;t have one yet.
           </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <div className="mt-6 flex justify-center">
             <Button asChild>
-              <Link href={`/login?callbackUrl=${encodeURIComponent(callbackPath)}`}>Sign in</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href={`/register?callbackUrl=${encodeURIComponent(callbackPath)}`}>
-                Create account
+              <Link href={`/login?callbackUrl=${encodeURIComponent(callbackPath)}`}>
+                Continue with email
               </Link>
             </Button>
           </div>

@@ -15,7 +15,7 @@ export function inviteMailtoHref(opts: {
     ``,
     `Accept here: ${opts.inviteUrl}`,
     ``,
-    `If you don't have an account yet, register with this email address first, then open the link.`,
+    `Open the link and sign in with this email address. If you're new, that creates your account.`,
   ].join("\n");
 
   return `mailto:${encodeURIComponent(opts.to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

@@ -1,30 +1,23 @@
 import { PrismaClient } from "@prisma/client";
-import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await hashPassword("password123");
-
   const alice = await prisma.user.upsert({
     where: { email: "alice@example.com" },
-    update: { passwordHash },
+    update: { name: "Alice Reader" },
     create: {
       email: "alice@example.com",
-      username: "alice",
       name: "Alice Reader",
-      passwordHash,
     },
   });
 
   const bob = await prisma.user.upsert({
     where: { email: "bob@example.com" },
-    update: { passwordHash },
+    update: { name: "Bob Bookworm" },
     create: {
       email: "bob@example.com",
-      username: "bob",
       name: "Bob Bookworm",
-      passwordHash,
     },
   });
 
@@ -47,7 +40,8 @@ async function main() {
 
   console.log("Seed complete:");
   console.log(`  Club: ${club.name} (/clubs/${club.slug})`);
-  console.log("  Users: alice@example.com, bob@example.com (password: password123)");
+  console.log("  Users: alice@example.com, bob@example.com");
+  console.log("  Sign in by requesting a magic link for one of those addresses.");
 }
 
 main()

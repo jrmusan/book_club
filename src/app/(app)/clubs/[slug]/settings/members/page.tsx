@@ -4,6 +4,7 @@ import { PendingInviteRow } from "@/components/club/pending-invite-row";
 import { inviteAcceptUrl } from "@/lib/app-url";
 import { requireClubOwnerBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { personName } from "@/lib/utils";
 
 export default async function MembersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -16,7 +17,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
       select: {
         id: true,
         role: true,
-        user: { select: { id: true, username: true, email: true, name: true } },
+        user: { select: { id: true, email: true, name: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -42,8 +43,7 @@ export default async function MembersPage({ params }: { params: Promise<{ slug: 
                 key={m.id}
                 clubSlug={slug}
                 userId={m.user.id}
-                displayName={m.user.name ?? m.user.username}
-                username={m.user.username}
+                displayName={personName(m.user)}
                 email={m.user.email}
                 role={m.role}
                 canRemove={m.role !== "OWNER" && m.user.id !== user.id}
