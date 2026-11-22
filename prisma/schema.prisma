@@ -242,11 +242,12 @@ model Poll {
 }
 
 model PollOption {
-  id        String  @id @default(cuid())
+  id        String    @id @default(cuid())
   pollId    String
   bookId    String?
   label     String?
-  sortOrder Int     @default(0)
+  startsAt  DateTime?
+  sortOrder Int       @default(0)
 
   poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
   book  Book?      @relation(fields: [bookId], references: [id], onDelete: SetNull)

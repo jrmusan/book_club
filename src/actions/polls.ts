@@ -168,8 +168,9 @@ export async function createMeetingPoll(
       closesAt: new Date(parsed.data.closesAt),
       createdById: user.id,
       options: {
-        create: parsed.data.options.map((label, index) => ({
-          label,
+        create: parsed.data.options.map((option, index) => ({
+          label: option.place,
+          startsAt: new Date(option.startsAt),
           sortOrder: index,
         })),
       },

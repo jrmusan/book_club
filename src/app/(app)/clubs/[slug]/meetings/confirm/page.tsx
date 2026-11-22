@@ -1,5 +1,7 @@
 import { ConfirmMeetingForm } from "@/components/meeting/confirm-meeting-form";
 import { requireClubOwnerBySlug, requireUser } from "@/lib/club-access";
+import { db } from "@/lib/db";
+import { getPollWinner } from "@/lib/polls";
 
 export default async function ConfirmMeetingPage({
   params,
@@ -11,15 +13,27 @@ export default async function ConfirmMeetingPage({
   const { slug } = await params;
   const { pollId } = await searchParams;
   const user = await requireUser();
-  await requireClubOwnerBySlug(slug, user.id);
+  const { club } = await requireClubOwnerBySlug(slug, user.id);
 
   if (!pollId) {
     return <p>Missing poll ID</p>;
   }
 
+  const poll = await db.poll.findFirst({
+    where: { id: pollId, clubId: club.id, type: "MEETING" },
+    select: { id: true },
+  });
+  const winner = poll ? await getPollWinner(poll.id) : null;
+
   return (
     <div className="mx-auto max-w-lg">
-      <ConfirmMeetingForm clubSlug={slug} pollId={pollId} />
+      <ConfirmMeetingForm
+        clubSlug={slug}
+        pollId={pollId}
+        winningOption={
+          winner ? { place: winner.label, startsAt: winner.startsAt?.toISOString() ?? null } : null
+        }
+      />
     </div>
   );
 }
