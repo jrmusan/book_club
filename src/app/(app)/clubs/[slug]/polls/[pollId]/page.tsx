@@ -38,6 +38,7 @@ export default async function PollDetailPage({
           select: {
             id: true,
             label: true,
+            startsAt: true,
             book: {
               select: {
                 id: true,
@@ -102,6 +103,7 @@ export default async function PollDetailPage({
             select: {
               id: true,
               label: true,
+              startsAt: true,
               book: {
                 select: {
                   id: true,
@@ -140,6 +142,7 @@ export default async function PollDetailPage({
   const results = options.map((o) => ({
     id: o.id,
     label: o.label,
+    startsAt: o.startsAt?.toISOString() ?? null,
     book: o.book
       ? {
           id: o.book.id,

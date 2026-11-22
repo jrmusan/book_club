@@ -1,12 +1,21 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-function toLocalInputValue(date: Date) {
+export function toLocalInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** `min` for a datetime-local input. Set after mount because it depends on the viewer's timezone. */
+export function useMinLocalDateTime(offsetMs = 0) {
+  const [min, setMin] = useState<string>();
+  useEffect(() => {
+    setMin(toLocalInputValue(new Date(Date.now() + offsetMs)));
+  }, [offsetMs]);
+  return min;
 }
 
 function addHours(hours: number) {
@@ -26,7 +35,7 @@ export function PollDeadlineField({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const min = useMemo(() => toLocalInputValue(new Date(Date.now() + 60_000)), []);
+  const min = useMinLocalDateTime(60_000);
 
   return (
     <div className="space-y-2">

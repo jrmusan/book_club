@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 type PollOption = {
   id: string;
   label: string | null;
+  startsAt?: string | null;
   book: {
     id: string;
     title: string;
@@ -290,6 +291,18 @@ export function PollVoteForm({
                   <p className="font-semibold leading-snug text-base sm:text-[1.05rem]">
                     {option.book?.title ?? option.label}
                   </p>
+                  {!option.book && option.startsAt && (
+                    <p className="mt-0.5 text-sm text-muted-foreground" suppressHydrationWarning>
+                      {new Date(option.startsAt).toLocaleString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
                   {option.book && (
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       {option.book.authors.join(", ")}
