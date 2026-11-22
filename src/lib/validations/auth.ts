@@ -75,17 +75,23 @@ export const createBookPollSchema = z
     }
   });
 
+const meetingOptionSchema = z.object({
+  place: z.string().trim().min(2, "Each place needs at least 2 characters").max(200),
+  startsAt: z.string().datetime("Pick a date and time for each option"),
+});
+
 export const createMeetingPollSchema = z.object({
   title: z.string().min(2).max(200),
-  options: z
-    .array(
-      z.object({
-        place: z.string().trim().min(2, "Each place needs at least 2 characters").max(200),
-        startsAt: z.string().datetime("Pick a date and time for each option"),
-      })
-    )
-    .min(2, "Add at least 2 options"),
+  options: z.array(meetingOptionSchema).min(2, "Add at least 2 options"),
   closesAt: pollClosesAtSchema,
+});
+
+export const suggestMeetingOptionSchema = meetingOptionSchema.extend({
+  pollId: z.string(),
+  startsAt: z
+    .string()
+    .datetime("Pick a date and time")
+    .refine((value) => new Date(value).getTime() > Date.now(), "Pick a time in the future"),
 });
 
 export const votePollSchema = z.object({

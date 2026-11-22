@@ -56,6 +56,7 @@ enum NotificationType {
   INVITE_ACCEPTED
   MEETING_SCHEDULED
   CLUB_INVITE
+  MEETING_OPTION_SUGGESTED
 }
 
 model User {
@@ -70,15 +71,16 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  ownedClubs    Club[]           @relation("ClubOwner")
-  memberships   ClubMembership[]
-  invitesSent   ClubInvite[]     @relation("InviteSender")
-  pollsCreated  Poll[]           @relation("PollCreator")
-  pollVotes     PollVote[]
-  bookRatings   BookRating[]
-  bookRankings  BookRanking[]
-  bookNotes     BookNote[]
-  notifications Notification[]
+  ownedClubs          Club[]           @relation("ClubOwner")
+  memberships         ClubMembership[]
+  invitesSent         ClubInvite[]     @relation("InviteSender")
+  pollsCreated        Poll[]           @relation("PollCreator")
+  pollVotes           PollVote[]
+  pollOptionsProposed PollOption[]     @relation("PollOptionProposer")
+  bookRatings         BookRating[]
+  bookRankings        BookRanking[]
+  bookNotes           BookNote[]
+  notifications       Notification[]
 }
 
 // Auth.js adapter tables. Magic-link tokens live in VerificationToken.
@@ -242,16 +244,19 @@ model Poll {
 }
 
 model PollOption {
-  id        String    @id @default(cuid())
-  pollId    String
-  bookId    String?
-  label     String?
-  startsAt  DateTime?
-  sortOrder Int       @default(0)
+  id           String    @id @default(cuid())
+  pollId       String
+  bookId       String?
+  label        String?
+  startsAt     DateTime?
+  // Set when a member suggested this option while voting.
+  proposedById String?
+  sortOrder    Int       @default(0)
 
-  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  book  Book?      @relation(fields: [bookId], references: [id], onDelete: SetNull)
-  votes PollVote[]
+  poll       Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  book       Book?      @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  proposedBy User?      @relation("PollOptionProposer", fields: [proposedById], references: [id], onDelete: SetNull)
+  votes      PollVote[]
 
   @@index([pollId])
 }

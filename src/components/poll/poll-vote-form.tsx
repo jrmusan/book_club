@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
-import { votePoll, votePollRanking } from "@/actions/polls";
+import { suggestMeetingOption, votePoll, votePollRanking } from "@/actions/polls";
 import { formatAudiobookHours } from "@/lib/books";
 import { GenreChips, GenreLegend } from "@/components/poll/genre-legend";
+import { useMinLocalDateTime } from "@/components/poll/poll-deadline-field";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LocalDateTime } from "@/components/ui/local-date-time";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +17,8 @@ type PollOption = {
   id: string;
   label: string | null;
   startsAt?: string | null;
+  proposedByName?: string | null;
+  voters?: { id: string; name: string }[];
   book: {
     id: string;
     title: string;
@@ -28,6 +33,17 @@ type PollOption = {
   voteCount: number;
   starTotal: number;
   topPicks: number;
+};
+
+const SUGGEST = "__suggest__";
+
+const MEETING_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
 };
 
 function BookDescription({ text }: { text: string }) {
@@ -116,6 +132,8 @@ function StarRank({
 export function PollVoteForm({
   clubSlug,
   pollId,
+  pollType = "BOOK_SELECTION",
+  currentUserId,
   options,
   userVoteOptionId,
   userRatings = [],
@@ -129,6 +147,8 @@ export function PollVoteForm({
 }: {
   clubSlug: string;
   pollId: string;
+  pollType?: "BOOK_SELECTION" | "MEETING";
+  currentUserId?: string;
   options: PollOption[];
   userVoteOptionId?: string;
   userRatings?: { optionId: string; stars: number }[];
@@ -153,6 +173,35 @@ export function PollVoteForm({
   const starsLeft = Math.max(0, starBudget - starsSpent);
   const budgetMode = rankLimit === "BUDGET";
   const bookCap = !budgetMode && maxRankedBooks != null && maxRankedBooks > 0 ? maxRankedBooks : null;
+  const meeting = pollType === "MEETING";
+  const canPick = !ranking && isOpen && (meeting || !userVoteOptionId);
+  const suggesting = selected === SUGGEST;
+  const [suggestion, setSuggestion] = useState({ place: "", startsAt: "" });
+  const minStartsAt = useMinLocalDateTime();
+
+  async function handleSuggest() {
+    const place = suggestion.place.trim();
+    if (!place || !suggestion.startsAt) {
+      setError("Add a place and a date & time for your suggestion");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.set("pollId", pollId);
+    formData.set("place", place);
+    formData.set("startsAt", new Date(suggestion.startsAt).toISOString());
+    const result = await suggestMeetingOption(clubSlug, formData);
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+    setSuggestion({ place: "", startsAt: "" });
+    setSelected(result.data!.optionId);
+    router.refresh();
+    setLoading(false);
+  }
 
   async function handleVote() {
     if (!selected) return;
@@ -270,12 +319,13 @@ export function PollVoteForm({
             key={option.id}
             className={cn(
               "touch-manipulation transition-colors",
-              !ranking && "cursor-pointer",
-              !ranking && isOpen && !userVoteOptionId && selected === option.id && "ring-2 ring-primary",
-              !ranking && userVoteOptionId === option.id && "ring-2 ring-primary",
+              canPick && "cursor-pointer",
+              !ranking &&
+                (canPick ? selected === option.id : userVoteOptionId === option.id) &&
+                "ring-2 ring-primary",
               ranking && (ratings[option.id] ?? 0) > 0 && "ring-2 ring-primary"
             )}
-            onClick={() => !ranking && isOpen && !userVoteOptionId && setSelected(option.id)}
+            onClick={() => canPick && setSelected(option.id)}
           >
             <CardContent className="p-3 sm:p-6 sm:py-4">
               <div className="flex gap-3 sm:gap-4">
@@ -292,15 +342,13 @@ export function PollVoteForm({
                     {option.book?.title ?? option.label}
                   </p>
                   {!option.book && option.startsAt && (
-                    <p className="mt-0.5 text-sm text-muted-foreground" suppressHydrationWarning>
-                      {new Date(option.startsAt).toLocaleString(undefined, {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                    <p className="mt-0.5 min-h-5 text-sm text-muted-foreground">
+                      <LocalDateTime iso={option.startsAt} options={MEETING_TIME_FORMAT} />
+                    </p>
+                  )}
+                  {option.proposedByName && (
+                    <p className="mt-0.5 text-xs italic text-muted-foreground">
+                      Suggested by {option.proposedByName}
                     </p>
                   )}
                   {option.book && (
@@ -369,6 +417,18 @@ export function PollVoteForm({
                         : `${option.starTotal} point${option.starTotal === 1 ? "" : "s"} from ${option.voteCount} rating${option.voteCount === 1 ? "" : "s"} (${pct}%)`
                       : `${option.voteCount} vote${option.voteCount === 1 ? "" : "s"} (${pct}%)`}
                   </p>
+                  {option.voters && option.voters.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Voted for this option">
+                      {option.voters.map((voter) => (
+                        <li
+                          key={voter.id}
+                          className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground"
+                        >
+                          {voter.id === currentUserId ? "You" : voter.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -376,7 +436,40 @@ export function PollVoteForm({
         );
       })}
 
-      {isOpen && (ranking || !userVoteOptionId) && (
+      {meeting && canPick && (
+        <Card
+          className={cn("cursor-pointer touch-manipulation transition-colors", suggesting && "ring-2 ring-primary")}
+          onClick={() => setSelected(SUGGEST)}
+        >
+          <CardContent className="p-3 sm:p-6 sm:py-4">
+            <p className="font-semibold leading-snug text-base sm:text-[1.05rem]">Nothing works for me</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Suggest another place and time. It is added to the poll for everyone to vote on, and your
+              vote moves to it.
+            </p>
+            {suggesting && (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2" onClick={(e) => e.stopPropagation()}>
+                <Input
+                  aria-label="Suggested place"
+                  placeholder="Place"
+                  value={suggestion.place}
+                  onChange={(e) => setSuggestion((s) => ({ ...s, place: e.target.value }))}
+                />
+                <Input
+                  aria-label="Suggested date and time"
+                  type="datetime-local"
+                  min={minStartsAt}
+                  value={suggestion.startsAt}
+                  onChange={(e) => setSuggestion((s) => ({ ...s, startsAt: e.target.value }))}
+                  className="min-w-0 max-w-full"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {isOpen && (ranking || canPick) && (
         <div className="sticky bottom-0 z-10 -mx-4 border-t border-border/70 bg-[var(--header-bg)] px-4 py-3 backdrop-blur-md transition-colors duration-300 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
           {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
           {ranking && (budgetMode || bookCap != null) && (
@@ -388,8 +481,11 @@ export function PollVoteForm({
           )}
           <Button
             className="w-full sm:w-auto"
-            onClick={ranking ? handleRanking : handleVote}
-            disabled={loading || (ranking ? rankedCount === 0 : !selected)}
+            onClick={ranking ? handleRanking : suggesting ? handleSuggest : handleVote}
+            disabled={
+              loading ||
+              (ranking ? rankedCount === 0 : !selected || selected === userVoteOptionId)
+            }
           >
             {loading
               ? "Submitting…"
@@ -397,7 +493,11 @@ export function PollVoteForm({
                 ? userRatings.length > 0
                   ? "Update ranking"
                   : "Submit ranking"
-                : "Submit vote"}
+                : suggesting
+                  ? "Suggest & vote"
+                  : userVoteOptionId
+                    ? "Change vote"
+                    : "Submit vote"}
           </Button>
         </div>
       )}
