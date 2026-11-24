@@ -226,7 +226,14 @@ export default async function PollDetailPage({
       </div>
 
       {canManage && (
-        <PollActions clubSlug={slug} pollId={pollId} status={status} pollType={poll.type} />
+        <PollActions
+          clubSlug={slug}
+          pollId={pollId}
+          pollTitle={poll.title}
+          status={status}
+          pollType={poll.type}
+          canDelete={isOwner}
+        />
       )}
 
       <div className="mt-6">

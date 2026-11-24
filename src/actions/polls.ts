@@ -314,6 +314,31 @@ export async function closePoll(clubSlug: string, pollId: string): Promise<Actio
   return { success: true };
 }
 
+/** Club owners can delete any poll, along with its options, votes and notifications. */
+export async function deletePoll(clubSlug: string, pollId: string): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let club;
+  try {
+    ({ club } = await requireClubOwnerBySlug(clubSlug, user.id));
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
+  }
+
+  const { count } = await db.poll.deleteMany({ where: { id: pollId, clubId: club.id } });
+  if (count === 0) return { success: false, error: "Poll not found" };
+
+  revalidatePath(`/clubs/${clubSlug}`);
+  revalidatePath(`/clubs/${clubSlug}/polls`);
+  revalidatePath(`/clubs/${clubSlug}/meetings`);
+  return { success: true };
+}
+
 export async function votePoll(
   clubSlug: string,
   formData: FormData
