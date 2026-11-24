@@ -6,11 +6,8 @@ import { CalendarX, Check, Star } from "lucide-react";
 import { suggestMeetingOption, votePoll, votePollRanking } from "@/actions/polls";
 import { formatAudiobookHours } from "@/lib/books";
 import { GenreChips, GenreLegend } from "@/components/poll/genre-legend";
-import {
-  MEETING_WHEN_FORMAT,
-  MeetingDateTile,
-  MeetingWhenWhere,
-} from "@/components/poll/meeting-option";
+import { MeetingDateTile, MeetingWhenWhere } from "@/components/poll/meeting-option";
+import { MEETING_WHEN_FORMAT } from "@/lib/dates";
 import { useMinLocalDateTime } from "@/components/poll/poll-deadline-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -6,6 +6,7 @@ import { LocalDateTime } from "@/components/ui/local-date-time";
 import { enrichBooksMissingMetadata } from "@/lib/books";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
+import { markPollNotificationsRead } from "@/lib/notifications";
 import { closeExpiredPoll } from "@/actions/polls";
 import { rankingScores, type PollScoreMethod } from "@/lib/polls";
 import { personName } from "@/lib/utils";
@@ -75,6 +76,7 @@ export default async function PollDetailPage({
   if (!poll) {
     return <p>Poll not found</p>;
   }
+  await markPollNotificationsRead(user.id, poll.id);
 
   let status = poll.status;
   if (
