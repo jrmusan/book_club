@@ -2,6 +2,19 @@ import { cache } from "react";
 import type { NotificationType, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
+export function notificationHref(clubSlug: string | null | undefined, pollId: string | null) {
+  if (!clubSlug) return null;
+  return pollId ? `/clubs/${clubSlug}/polls/${pollId}` : `/clubs/${clubSlug}`;
+}
+
+/** Clears the viewer's unread notifications about a poll once they look at it. */
+export async function markPollNotificationsRead(userId: string, pollId: string) {
+  await db.notification.updateMany({
+    where: { userId, pollId, readAt: null },
+    data: { readAt: new Date() },
+  });
+}
+
 export async function createNotificationsForClubMembers(
   clubId: string,
   excludeUserId: string,

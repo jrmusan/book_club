@@ -6,6 +6,7 @@ import { addBookToClub, searchBooks, upsertBook, type BookSearchResult } from "@
 import { requireClubMemberBySlug, requireClubOwnerBySlug, requireUser } from "@/lib/club-access";
 import { createNotificationsForClubMembers } from "@/lib/notifications";
 import { getPollWinner } from "@/lib/polls";
+import { notifyPollVote } from "@/lib/poll-vote-notifications";
 import {
   bookRankingSchema,
   bookRatingSchema,
@@ -354,14 +355,29 @@ export async function votePoll(
 
   const option = await db.pollOption.findFirst({
     where: { id: parsed.data.optionId, pollId: poll.id },
+    include: { book: { select: { title: true } } },
   });
   if (!option) return { success: false, error: "Invalid option" };
   if (poll.votingMode === "RANKING") {
     return { success: false, error: "This poll uses star ranking" };
   }
+  const choice = {
+    label: option.book?.title ?? option.label,
+    startsAt: option.startsAt?.toISOString() ?? null,
+  };
 
   if (poll.type === "MEETING") {
-    await replaceVote(poll.id, option.id, user.id);
+    const outcome = await replaceVote(poll.id, option.id, user.id);
+    if (outcome !== "unchanged") {
+      await notifyPollVote({
+        clubId: club.id,
+        clubSlug,
+        poll,
+        voter: user,
+        choice,
+        changed: outcome === "changed",
+      });
+    }
     revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
     return { success: true };
   }
@@ -379,17 +395,28 @@ export async function votePoll(
       userId: user.id,
     },
   });
+  await notifyPollVote({ clubId: club.id, clubSlug, poll, voter: user, choice });
 
   revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
   return { success: true };
 }
 
 /** Meeting polls let members move their vote, e.g. to a time someone suggested later. */
-async function replaceVote(pollId: string, optionId: string, userId: string) {
+async function replaceVote(
+  pollId: string,
+  optionId: string,
+  userId: string
+): Promise<"new" | "changed" | "unchanged"> {
+  const previous = await db.pollVote.findFirst({
+    where: { pollId, userId },
+    select: { optionId: true },
+  });
+  if (previous?.optionId === optionId) return "unchanged";
   await db.$transaction([
     db.pollVote.deleteMany({ where: { pollId, userId } }),
     db.pollVote.create({ data: { pollId, optionId, userId } }),
   ]);
+  return previous ? "changed" : "new";
 }
 
 /** "Nothing works for me": add a new place + time to an open meeting poll and vote for it. */
@@ -461,8 +488,18 @@ export async function suggestMeetingOption(
     optionId = created.id;
   }
 
-  await replaceVote(poll.id, optionId, user.id);
+  const outcome = await replaceVote(poll.id, optionId, user.id);
 
+  if (duplicate && outcome !== "unchanged") {
+    await notifyPollVote({
+      clubId: club.id,
+      clubSlug,
+      poll,
+      voter: user,
+      choice: { label: parsed.data.place, startsAt: startsAt.toISOString() },
+      changed: outcome === "changed",
+    });
+  }
   if (!duplicate) {
     await createNotificationsForClubMembers(
       club.id,
@@ -567,7 +604,7 @@ export async function votePollRanking(
     return { success: false, error: "One of those books is not in this poll" };
   }
 
-  await db.$transaction([
+  const [{ count: replaced }] = await db.$transaction([
     db.pollVote.deleteMany({ where: { pollId: poll.id, userId: user.id } }),
     db.pollVote.createMany({
       data: parsed.data.ratings.map((rating) => ({
@@ -578,6 +615,14 @@ export async function votePollRanking(
       })),
     }),
   ]);
+  await notifyPollVote({
+    clubId: club.id,
+    clubSlug,
+    poll,
+    voter: user,
+    choice: null,
+    changed: replaced > 0,
+  });
 
   revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
   return { success: true };

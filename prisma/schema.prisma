@@ -57,6 +57,7 @@ enum NotificationType {
   MEETING_SCHEDULED
   CLUB_INVITE
   MEETING_OPTION_SUGGESTED
+  POLL_VOTE
 }
 
 model User {

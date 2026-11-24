@@ -2,11 +2,7 @@
 
 import { CalendarDays, MapPin } from "lucide-react";
 import { LocalDateTime, useLocalDateTime } from "@/components/ui/local-date-time";
-
-export const MEETING_WHEN_FORMAT: Intl.DateTimeFormatOptions = {
-  dateStyle: "full",
-  timeStyle: "short",
-};
+import { MEETING_WHEN_FORMAT } from "@/lib/dates";
 
 export function MeetingDateTile({ iso }: { iso: string }) {
   const month = useLocalDateTime(iso, { month: "short" });

@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { NotificationCard } from "@/components/notifications/notification-card";
 import { requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 import { getRecentUnreadNotifications } from "@/lib/notifications";
@@ -138,14 +139,7 @@ async function RecentNotifications({ userId }: { userId: string }) {
       </div>
       <div className="space-y-2">
         {unread.map((n) => (
-          <Card key={n.id}>
-            <CardContent className="flex items-center justify-between py-4">
-              <p className="text-sm">
-                {(n.payload as { message?: string }).message ?? n.type}
-              </p>
-              <Badge variant="secondary">New</Badge>
-            </CardContent>
-          </Card>
+          <NotificationCard key={n.id} notification={{ ...n, readAt: null }} />
         ))}
       </div>
     </section>

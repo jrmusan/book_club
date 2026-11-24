@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { markAllNotificationsRead } from "@/actions/notifications";
+import { NotificationCard } from "@/components/notifications/notification-card";
 import { requireUser } from "@/lib/club-access";
 import { getUserNotifications } from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default async function NotificationsPage() {
   const user = await requireUser();
@@ -34,35 +33,7 @@ export default async function NotificationsPage() {
             </CardContent>
           </Card>
         ) : (
-          notifications.map((n) => {
-            const payload = n.payload as { message?: string; clubSlug?: string };
-            const href =
-              n.pollId && payload.clubSlug
-                ? `/clubs/${payload.clubSlug}/polls/${n.pollId}`
-                : payload.clubSlug
-                  ? `/clubs/${payload.clubSlug}`
-                  : null;
-
-            const inner = (
-              <Card className={!n.readAt ? "border-primary/30 bg-accent/30" : ""}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div>
-                    <p className="text-sm">{payload.message ?? n.type}</p>
-                    <p className="text-xs text-muted-foreground">{n.createdAt.toLocaleString()}</p>
-                  </div>
-                  {!n.readAt && <Badge variant="secondary">New</Badge>}
-                </CardContent>
-              </Card>
-            );
-
-            if (!href) return <div key={n.id}>{inner}</div>;
-
-            return (
-              <Link key={n.id} href={href} className="block">
-                {inner}
-              </Link>
-            );
-          })
+          notifications.map((n) => <NotificationCard key={n.id} notification={n} />)
         )}
       </div>
     </main>
