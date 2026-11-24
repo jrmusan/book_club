@@ -7,6 +7,18 @@ import {
   type PollVoteChoice,
 } from "@/lib/poll-vote-notifications";
 
+function isOptionRemovedPayload(
+  payload: unknown
+): payload is { actorName: string; pollTitle: string; choice: PollVoteChoice } {
+  const p = payload as { actorName?: unknown; pollTitle?: unknown; choice?: unknown } | null;
+  return (
+    typeof p?.actorName === "string" &&
+    typeof p.pollTitle === "string" &&
+    !!p.choice &&
+    typeof p.choice === "object"
+  );
+}
+
 function Choice({ choice }: { choice: PollVoteChoice }) {
   return (
     <strong className="font-semibold">
@@ -42,6 +54,16 @@ export function NotificationMessage({ type, payload }: { type: NotificationType;
       <>
         <strong className="font-semibold">{describeVoters(voters)}</strong> voted in{" "}
         <em>{pollTitle}</em>
+      </>
+    );
+  }
+
+  if (type === "MEETING_OPTION_REMOVED" && isOptionRemovedPayload(payload)) {
+    return (
+      <>
+        <strong className="font-semibold">{payload.actorName}</strong> removed{" "}
+        <Choice choice={payload.choice} /> from <em>{payload.pollTitle}</em>. Your vote was cleared,
+        so pick another time.
       </>
     );
   }

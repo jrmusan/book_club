@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarX, Check, Star } from "lucide-react";
-import { suggestMeetingOption, votePoll, votePollRanking } from "@/actions/polls";
+import { CalendarX, Check, Star, Trash2 } from "lucide-react";
+import {
+  deleteMeetingOption,
+  suggestMeetingOption,
+  votePoll,
+  votePollRanking,
+} from "@/actions/polls";
 import { formatAudiobookHours } from "@/lib/books";
 import { GenreChips, GenreLegend } from "@/components/poll/genre-legend";
 import { MeetingDateTile, MeetingWhenWhere } from "@/components/poll/meeting-option";
@@ -20,6 +25,7 @@ type PollOption = {
   id: string;
   label: string | null;
   startsAt?: string | null;
+  proposedById?: string | null;
   proposedByName?: string | null;
   voters?: { id: string; name: string }[];
   book: {
@@ -198,6 +204,26 @@ export function PollVoteForm({
     setLoading(false);
   }
 
+  async function handleRemoveOption(option: PollOption) {
+    const others = (option.voters ?? []).filter((voter) => voter.id !== currentUserId).length;
+    const warning =
+      others > 0
+        ? ` ${others} other ${others === 1 ? "person has" : "people have"} voted for it. Their votes will be cleared and they will be notified.`
+        : "";
+    if (!window.confirm(`Remove your suggestion "${option.label ?? "this option"}"?${warning}`)) return;
+    setLoading(true);
+    setError(null);
+    const result = await deleteMeetingOption(clubSlug, pollId, option.id);
+    if (!result.success) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+    if (selected === option.id) setSelected("");
+    router.refresh();
+    setLoading(false);
+  }
+
   async function handleVote() {
     if (!selected) return;
     setLoading(true);
@@ -339,9 +365,26 @@ export function PollVoteForm({
                   <div className="min-w-0 flex-1">
                     <MeetingWhenWhere startsAt={option.startsAt} place={option.label} />
                     {option.proposedByName && (
-                      <p className="mt-2 text-xs italic text-muted-foreground">
-                        Suggested by {option.proposedByName}
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <p className="text-xs italic text-muted-foreground">
+                          Suggested by{" "}
+                          {option.proposedById === currentUserId ? "you" : option.proposedByName}
+                        </p>
+                        {isOpen && option.proposedById === currentUserId && (
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveOption(option);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full px-1 text-xs font-medium text-destructive hover:underline disabled:opacity-50 touch-manipulation"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                            Remove suggestion
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">

@@ -509,6 +509,7 @@ export async function suggestMeetingOption(
         message: `${personName(user)} suggested a new time for ${poll.title}`,
         clubSlug,
         pollTitle: poll.title,
+        optionId,
       },
       poll.id
     );
@@ -516,6 +517,84 @@ export async function suggestMeetingOption(
 
   revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
   return { success: true, data: { optionId } };
+}
+
+/** The member who suggested a meeting option can take it back while the poll is open. */
+export async function deleteMeetingOption(
+  clubSlug: string,
+  pollId: string,
+  optionId: string
+): Promise<ActionResult> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let club;
+  try {
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
+  }
+
+  const poll = await db.poll.findFirst({
+    where: { id: pollId, clubId: club.id, type: "MEETING", status: "OPEN" },
+  });
+  if (!poll) return { success: false, error: "Poll is not open" };
+  if (poll.closesAt && poll.closesAt.getTime() <= Date.now()) {
+    await finalizeClosedPoll(club.id, poll.id, poll.type);
+    revalidatePath(`/clubs/${clubSlug}`);
+    revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+    return { success: false, error: "This poll has closed" };
+  }
+
+  const option = await db.pollOption.findFirst({
+    where: { id: optionId, pollId: poll.id },
+    select: {
+      id: true,
+      label: true,
+      startsAt: true,
+      proposedById: true,
+      votes: { where: { userId: { not: user.id } }, select: { userId: true } },
+    },
+  });
+  if (!option) return { success: false, error: "Option not found" };
+  if (option.proposedById !== user.id) {
+    return { success: false, error: "Only the member who suggested this option can remove it" };
+  }
+
+  const actorName = personName(user);
+  const choice = { label: option.label, startsAt: option.startsAt?.toISOString() ?? null };
+  await db.$transaction([
+    db.pollOption.delete({ where: { id: option.id } }),
+    db.notification.deleteMany({
+      where: {
+        type: "MEETING_OPTION_SUGGESTED",
+        pollId: poll.id,
+        payload: { path: ["optionId"], equals: option.id },
+      },
+    }),
+    db.notification.createMany({
+      data: option.votes.map((vote) => ({
+        userId: vote.userId,
+        type: "MEETING_OPTION_REMOVED" as const,
+        clubId: club.id,
+        pollId: poll.id,
+        payload: {
+          clubSlug,
+          pollTitle: poll.title,
+          actorName,
+          choice,
+          message: `${actorName} removed ${option.label ?? "an option"} from ${poll.title}. Your vote was cleared, so pick another time.`,
+        },
+      })),
+    }),
+  ]);
+
+  revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+  return { success: true };
 }
 
 export async function votePollRanking(
