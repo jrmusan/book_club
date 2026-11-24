@@ -172,6 +172,13 @@ export default async function PollDetailPage({
     starTotal: scores.points.get(o.id) ?? 0,
     topPicks: scores.topPicks.get(o.id) ?? 0,
   }));
+  if (poll.type === "MEETING") {
+    results.sort(
+      (a, b) =>
+        (a.startsAt ? Date.parse(a.startsAt) : Infinity) -
+        (b.startsAt ? Date.parse(b.startsAt) : Infinity)
+    );
+  }
   const userVote = poll.votes[0];
   const scoreOf = (option: (typeof results)[number]) =>
     ranking ? (scoreMethod === "TOP_STARS" ? option.topPicks : option.starTotal) : option.voteCount;
