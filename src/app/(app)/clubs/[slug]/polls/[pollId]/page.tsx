@@ -2,11 +2,16 @@ import Link from "next/link";
 import { PollVoteForm } from "@/components/poll/poll-vote-form";
 import { PollActions } from "@/components/poll/poll-actions";
 import { Badge } from "@/components/ui/badge";
+import { LocalDateTime } from "@/components/ui/local-date-time";
 import { enrichBooksMissingMetadata } from "@/lib/books";
 import { requireClubMemberBySlug, requireUser } from "@/lib/club-access";
 import { db } from "@/lib/db";
 import { closeExpiredPoll } from "@/actions/polls";
 import { rankingScores, type PollScoreMethod } from "@/lib/polls";
+import { personName } from "@/lib/utils";
+
+const personSelect = { id: true, name: true, email: true } as const;
+const voteSelect = { stars: true, userId: true, user: { select: personSelect } } as const;
 
 export default async function PollDetailPage({
   params,
@@ -39,6 +44,7 @@ export default async function PollDetailPage({
             id: true,
             label: true,
             startsAt: true,
+            proposedBy: { select: personSelect },
             book: {
               select: {
                 id: true,
@@ -55,7 +61,7 @@ export default async function PollDetailPage({
                 genres: true,
               },
             },
-            votes: { select: { stars: true, userId: true } },
+            votes: { select: voteSelect, orderBy: { createdAt: "asc" } },
           },
         },
         votes: {
@@ -104,6 +110,7 @@ export default async function PollDetailPage({
               id: true,
               label: true,
               startsAt: true,
+              proposedBy: { select: personSelect },
               book: {
                 select: {
                   id: true,
@@ -117,7 +124,7 @@ export default async function PollDetailPage({
                   genres: true,
                 },
               },
-              votes: { select: { stars: true, userId: true } },
+              votes: { select: voteSelect, orderBy: { createdAt: "asc" } },
             },
           },
         },
@@ -143,6 +150,11 @@ export default async function PollDetailPage({
     id: o.id,
     label: o.label,
     startsAt: o.startsAt?.toISOString() ?? null,
+    proposedByName: o.proposedBy ? personName(o.proposedBy) : null,
+    voters:
+      poll.type === "MEETING"
+        ? o.votes.map((vote) => ({ id: vote.user.id, name: personName(vote.user) }))
+        : [],
     book: o.book
       ? {
           id: o.book.id,
@@ -160,6 +172,13 @@ export default async function PollDetailPage({
     starTotal: scores.points.get(o.id) ?? 0,
     topPicks: scores.topPicks.get(o.id) ?? 0,
   }));
+  if (poll.type === "MEETING") {
+    results.sort(
+      (a, b) =>
+        (a.startsAt ? Date.parse(a.startsAt) : Infinity) -
+        (b.startsAt ? Date.parse(b.startsAt) : Infinity)
+    );
+  }
   const userVote = poll.votes[0];
   const scoreOf = (option: (typeof results)[number]) =>
     ranking ? (scoreMethod === "TOP_STARS" ? option.topPicks : option.starTotal) : option.voteCount;
@@ -197,10 +216,10 @@ export default async function PollDetailPage({
           {poll.closesAt && (
             <p className="mt-2 text-sm text-muted-foreground">
               {isOpen ? "Voting closes" : "Closed"}{" "}
-              {poll.closesAt.toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
+              <LocalDateTime
+                iso={poll.closesAt.toISOString()}
+                options={{ dateStyle: "medium", timeStyle: "short" }}
+              />
             </p>
           )}
         </div>
@@ -214,6 +233,8 @@ export default async function PollDetailPage({
         <PollVoteForm
           clubSlug={slug}
           pollId={pollId}
+          pollType={poll.type}
+          currentUserId={user.id}
           options={results}
           userVoteOptionId={ranking ? undefined : userVote?.optionId}
           userRatings={poll.votes.flatMap((vote) =>

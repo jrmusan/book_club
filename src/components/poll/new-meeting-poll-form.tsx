@@ -36,7 +36,7 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
       .map((o) => ({ place: o.place.trim(), startsAt: o.startsAt }))
       .filter((o) => o.place || o.startsAt);
     if (filled.some((o) => !o.place || !o.startsAt)) {
-      setError("Each option needs both a place and a date & time");
+      setError("Each option needs both a when and a where");
       return;
     }
     if (filled.length < 2) {
@@ -86,37 +86,50 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
             />
           </div>
           <PollDeadlineField value={closesAt} onChange={setClosesAt} />
-          <div className="space-y-3">
-            <Label>Options</Label>
+          <fieldset className="space-y-3">
+            <legend className="text-lg font-bold">When &amp; Where</legend>
+            <p className="text-sm text-muted-foreground">
+              Each option is a date, time and place for members to vote on.
+            </p>
             {options.map((option, index) => (
-              <div key={index} className="flex items-start gap-2">
-                <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                  <Input
-                    aria-label={`Option ${index + 1} place`}
-                    value={option.place}
-                    onChange={(e) => updateOption(index, { place: e.target.value })}
-                    placeholder="Central Library"
-                  />
-                  <Input
-                    aria-label={`Option ${index + 1} date and time`}
-                    type="datetime-local"
-                    min={minStartsAt}
-                    value={option.startsAt}
-                    onChange={(e) => updateOption(index, { startsAt: e.target.value })}
-                    className="min-w-0 max-w-full"
-                  />
+              <div key={index} className="rounded-2xl border border-border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-semibold">Option {index + 1}</p>
+                  {options.length > 2 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label={`Remove option ${index + 1}`}
+                      onClick={() => setOptions((prev) => prev.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                {options.length > 2 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Remove option ${index + 1}`}
-                    onClick={() => setOptions((prev) => prev.filter((_, i) => i !== index))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="min-w-0 space-y-1.5">
+                    <Label htmlFor={`option-${index}-when`}>When</Label>
+                    <Input
+                      id={`option-${index}-when`}
+                      type="datetime-local"
+                      min={minStartsAt}
+                      value={option.startsAt}
+                      onChange={(e) => updateOption(index, { startsAt: e.target.value })}
+                      className="min-w-0 max-w-full"
+                    />
+                  </div>
+                  <div className="min-w-0 space-y-1.5">
+                    <Label htmlFor={`option-${index}-where`}>Where</Label>
+                    <Input
+                      id={`option-${index}-where`}
+                      value={option.place}
+                      onChange={(e) => updateOption(index, { place: e.target.value })}
+                      placeholder="Central Library"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
             <Button
@@ -128,7 +141,7 @@ export function NewMeetingPollForm({ clubSlug }: { clubSlug: string }) {
               <Plus className="mr-2 h-4 w-4" />
               Add option
             </Button>
-          </div>
+          </fieldset>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" className="w-full sm:w-auto" asChild>

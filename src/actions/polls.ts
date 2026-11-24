@@ -13,8 +13,10 @@ import {
   createBookPollSchema,
   createMeetingPollSchema,
   rankPollSchema,
+  suggestMeetingOptionSchema,
   votePollSchema,
 } from "@/lib/validations/auth";
+import { personName } from "@/lib/utils";
 import type { ActionResult } from "@/actions/auth";
 
 export async function searchBooksAction(query: string) {
@@ -358,6 +360,12 @@ export async function votePoll(
     return { success: false, error: "This poll uses star ranking" };
   }
 
+  if (poll.type === "MEETING") {
+    await replaceVote(poll.id, option.id, user.id);
+    revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+    return { success: true };
+  }
+
   const existing = await db.pollVote.findFirst({
     where: { pollId: poll.id, userId: user.id },
     select: { id: true },
@@ -374,6 +382,103 @@ export async function votePoll(
 
   revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
   return { success: true };
+}
+
+/** Meeting polls let members move their vote, e.g. to a time someone suggested later. */
+async function replaceVote(pollId: string, optionId: string, userId: string) {
+  await db.$transaction([
+    db.pollVote.deleteMany({ where: { pollId, userId } }),
+    db.pollVote.create({ data: { pollId, optionId, userId } }),
+  ]);
+}
+
+/** "Nothing works for me": add a new place + time to an open meeting poll and vote for it. */
+export async function suggestMeetingOption(
+  clubSlug: string,
+  formData: FormData
+): Promise<ActionResult<{ optionId: string }>> {
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  let club;
+  try {
+    ({ club } = await requireClubMemberBySlug(clubSlug, user.id));
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Forbidden" };
+  }
+
+  const parsed = suggestMeetingOptionSchema.safeParse({
+    pollId: formData.get("pollId"),
+    place: formData.get("place"),
+    startsAt: formData.get("startsAt"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid suggestion" };
+  }
+
+  const poll = await db.poll.findFirst({
+    where: { id: parsed.data.pollId, clubId: club.id, type: "MEETING", status: "OPEN" },
+  });
+  if (!poll) return { success: false, error: "Poll is not open for voting" };
+
+  if (poll.closesAt && poll.closesAt.getTime() <= Date.now()) {
+    await finalizeClosedPoll(club.id, poll.id, poll.type);
+    revalidatePath(`/clubs/${clubSlug}`);
+    revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+    return { success: false, error: "This poll has closed" };
+  }
+
+  const startsAt = new Date(parsed.data.startsAt);
+  const duplicate = await db.pollOption.findFirst({
+    where: {
+      pollId: poll.id,
+      startsAt,
+      label: { equals: parsed.data.place, mode: "insensitive" },
+    },
+    select: { id: true },
+  });
+
+  let optionId = duplicate?.id;
+  if (!optionId) {
+    const last = await db.pollOption.findFirst({
+      where: { pollId: poll.id },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    const created = await db.pollOption.create({
+      data: {
+        pollId: poll.id,
+        label: parsed.data.place,
+        startsAt,
+        proposedById: user.id,
+        sortOrder: (last?.sortOrder ?? -1) + 1,
+      },
+    });
+    optionId = created.id;
+  }
+
+  await replaceVote(poll.id, optionId, user.id);
+
+  if (!duplicate) {
+    await createNotificationsForClubMembers(
+      club.id,
+      user.id,
+      "MEETING_OPTION_SUGGESTED",
+      {
+        message: `${personName(user)} suggested a new time for ${poll.title}`,
+        clubSlug,
+        pollTitle: poll.title,
+      },
+      poll.id
+    );
+  }
+
+  revalidatePath(`/clubs/${clubSlug}/polls/${poll.id}`);
+  return { success: true, data: { optionId } };
 }
 
 export async function votePollRanking(
