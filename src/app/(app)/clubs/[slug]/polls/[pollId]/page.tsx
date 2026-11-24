@@ -152,6 +152,7 @@ export default async function PollDetailPage({
     id: o.id,
     label: o.label,
     startsAt: o.startsAt?.toISOString() ?? null,
+    proposedById: o.proposedBy?.id ?? null,
     proposedByName: o.proposedBy ? personName(o.proposedBy) : null,
     voters:
       poll.type === "MEETING"
